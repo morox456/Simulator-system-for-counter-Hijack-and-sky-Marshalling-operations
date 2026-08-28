@@ -1,0 +1,162 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #101820;
+    color: white;
+}
+
+.home-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.home-container h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.home-container p {
+    font-size: 18px;
+    color: #cccccc;
+    margin-bottom: 40px;
+}
+
+.login-box {
+    background: #1c2733;
+    padding: 35px;
+    border-radius: 12px;
+    width: 350px;
+}
+
+.login-box h2 {
+    margin-bottom: 25px;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #2196f3;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.login-box button:hover {
+    background: #1976d2;
+}
+
+.simulator-container {
+    text-align: center;
+    padding: 30px;
+}
+
+.simulator-container h1 {
+    margin-bottom: 10px;
+}
+
+.aircraft {
+    width: 700px;
+    height: 400px;
+    margin: 30px auto;
+    padding: 40px;
+
+    background: #d9d9d9;
+    border-radius: 100px;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+
+    align-items: center;
+}
+
+.passenger {
+    background: #2196f3;
+    padding: 25px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+}
+
+.passenger:hover {
+    background: #1976d2;
+}
+
+.crew {
+    background: #4caf50;
+    padding: 20px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.marshal {
+    background: #f44336;
+    padding: 20px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+#scenario {
+    background: #1c2733;
+    width: 650px;
+    margin: auto;
+    padding: 25px;
+    border-radius: 10px;
+}
+
+#scenario button {
+    margin: 10px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px;
+}
+
+.stats div {
+    background: #1c2733;
+    padding: 15px 30px;
+    border-radius: 8px;
+}
+
+.stats span {
+    display: block;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#scenario button {
+    background: #2196f3;
+    color: white;
+}
+
+#scenario button:hover {
+    background: #1976d2;
+}

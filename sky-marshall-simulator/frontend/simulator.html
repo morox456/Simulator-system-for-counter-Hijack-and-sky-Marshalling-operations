@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sky Marshal Simulator</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="simulator-container">
+
+        <h1>Virtual Aircraft Simulator</h1>
+
+        <p id="welcome"></p>
+
+        <div class="stats">
+
+            <div>
+                <strong>Score</strong>
+                <span id="score">0</span>
+            </div>
+
+            <div>
+                <strong>Scenario</strong>
+                <span id="scenarioNumber">1</span>
+            </div>
+
+            <div>
+                <strong>Time</strong>
+                <span id="timer">30</span>s
+            </div>
+
+        </div>
+
+        <!-- AIRCRAFT -->
+
+        <div class="aircraft">
+
+            <div class="passenger" onclick="selectPassenger(1)">
+                P1
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(2)">
+                P2
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(3)">
+                P3
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(4)">
+                P4
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(5)">
+                P5
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(6)">
+                P6
+            </div>
+
+            <div class="crew">
+                CREW
+            </div>
+
+            <div class="marshal">
+                SKY MARSHAL
+            </div>
+
+        </div>
+
+        <!-- SCENARIO -->
+
+        <div id="scenario">
+
+            <h2>Scenario</h2>
+
+            <p>
+                Select a passenger to begin the simulation.
+            </p>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        let username = localStorage.getItem("username");
+
+        document.getElementById("welcome").innerText =
+            "Welcome, " + username;
+
+
+        let score = 0;
+
+        let scenarioCount = 1;
+
+        let timeLeft = 30;
+
+        let timerInterval;
+
+        let currentScenario;
+
+
+        // SCENARIOS
+
+        const scenarios = [
+
+            {
+                description:
+                    "A passenger is repeatedly looking around the cabin and behaving unusually.",
+
+                correct: "observe",
+
+                explanation:
+                    "The trainee should first observe and assess the situation."
+            },
+
+            {
+                description:
+                    "A passenger reports unusual behavior from another passenger.",
+
+                correct: "report",
+
+                explanation:
+                    "The situation should be communicated to the crew for further assessment."
+            },
+
+            {
+                description:
+                    "A passenger appears nervous and is repeatedly checking their surroundings.",
+
+                correct: "observe",
+
+                explanation:
+                    "The situation should initially be observed rather than causing unnecessary alarm."
+            },
+
+            {
+                description:
+                    "Cabin crew informs you about a suspicious situation involving a passenger.",
+
+                correct: "report",
+
+                explanation:
+                    "Communication with the crew is important for coordinated assessment."
+            }
+
+        ];
+
+
+        // SELECT PASSENGER
+
+        function selectPassenger(number) {
+
+            clearInterval(timerInterval);
+
+            timeLeft = 30;
+
+            document.getElementById("timer").innerText = timeLeft;
+
+            startTimer();
+
+
+            currentScenario =
+                scenarios[Math.floor(Math.random() * scenarios.length)];
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Passenger ${number}</h2>
+
+                <p>
+                    ${currentScenario.description}
+                </p>
+
+                <h3>What would you do?</h3>
+
+                <button onclick="response('observe')">
+                    Observe
+                </button>
+
+                <button onclick="response('report')">
+                    Report to Crew
+                </button>
+
+                <button onclick="response('ignore')">
+                    Ignore
+                </button>
+
+            `;
+
+        }
+
+
+        // TIMER
+
+        function startTimer() {
+
+            timerInterval = setInterval(function () {
+
+                timeLeft--;
+
+                document.getElementById("timer").innerText =
+                    timeLeft;
+
+
+                if (timeLeft <= 0) {
+
+                    clearInterval(timerInterval);
+
+                    alert("Time's up!");
+
+                    nextScenario();
+
+                }
+
+            }, 1000);
+
+        }
+
+
+        // RESPONSE
+
+        function response(action) {
+
+            clearInterval(timerInterval);
+
+
+            if (action === currentScenario.correct) {
+
+                score += 10;
+
+                alert(
+                    "Correct response!\n\n" +
+                    currentScenario.explanation
+                );
+
+            } else {
+
+                score -= 5;
+
+                alert(
+                    "Not the best response.\n\n" +
+                    currentScenario.explanation
+                );
+
+            }
+
+
+            if (score < 0) {
+
+                score = 0;
+
+            }
+
+
+            document.getElementById("score").innerText =
+                score;
+
+
+            nextScenario();
+
+        }
+
+
+        // NEXT SCENARIO
+
+        function nextScenario() {
+
+            scenarioCount++;
+
+            document.getElementById("scenarioNumber").innerText =
+                scenarioCount;
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Next Scenario</h2>
+
+                <p>
+                    Select another passenger to continue training.
+                </p>
+
+            `;
+
+        }
+
+    </script>
+
+</body>
+
+</html>
