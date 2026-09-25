@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sky Marshal Simulator</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="simulator-container">
+
+        <h1>Virtual Aircraft Simulator</h1>
+
+        <p id="welcome"></p>
+
+        <div class="stats">
+
+            <div>
+                <strong>Score</strong>
+                <span id="score">0</span>
+            </div>
+
+            <div>
+                <strong>Scenario</strong>
+                <span id="scenarioNumber">1 / 5</span>
+            </div>
+
+            <div>
+                <strong>Time</strong>
+                <span id="timer">30</span>s
+            </div>
+
+        </div>
+
+        <!-- AIRCRAFT -->
+
+        <div class="aircraft">
+
+            <div class="passenger" onclick="selectPassenger(1)">
+                P1
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(2)">
+                P2
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(3)">
+                P3
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(4)">
+                P4
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(5)">
+                P5
+            </div>
+
+            <div class="passenger" onclick="selectPassenger(6)">
+                P6
+            </div>
+
+            <div class="crew">
+                CREW
+            </div>
+
+            <div class="marshal">
+                SKY MARSHAL
+            </div>
+
+        </div>
+
+        <!-- SCENARIO -->
+
+        <div id="scenario">
+
+            <h2>Scenario</h2>
+
+            <p>
+                Select a passenger to begin the simulation.
+            </p>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        // USER
+
+        let username = localStorage.getItem("username");
+
+        document.getElementById("welcome").innerText =
+            "Welcome, " + username;
+
+
+        // SESSION VARIABLES
+
+        let score = 0;
+
+        let scenarioCount = 1;
+
+        let timeLeft = 30;
+
+        let timerInterval;
+
+        let currentScenario;
+
+        let sessionScenarios = [];
+
+        let completedScenarios = 0;
+
+        let correctAnswers = 0;
+
+        let totalResponseTime = 0;
+
+        let scenarioStartTime;
+
+
+        // SCENARIOS
+
+        const scenarios = [
+
+            {
+                description:
+                    "A passenger is repeatedly looking around the cabin and behaving unusually.",
+
+                correct: "observe",
+
+                explanation:
+                    "The trainee should first observe and assess the situation."
+            },
+
+            {
+                description:
+                    "A passenger reports unusual behavior from another passenger.",
+
+                correct: "report",
+
+                explanation:
+                    "The situation should be communicated to the crew for further assessment."
+            },
+
+            {
+                description:
+                    "A passenger appears nervous and is repeatedly checking their surroundings.",
+
+                correct: "observe",
+
+                explanation:
+                    "The situation should initially be observed rather than causing unnecessary alarm."
+            },
+
+            {
+                description:
+                    "Cabin crew informs you about a suspicious situation involving a passenger.",
+
+                correct: "report",
+
+                explanation:
+                    "Communication with the crew is important for coordinated assessment."
+            },
+
+            {
+                description:
+                    "A passenger attempts to enter a restricted area of the aircraft without authorization.",
+
+                correct: "report",
+
+                explanation:
+                    "The trainee should immediately communicate the situation to the appropriate crew member."
+            }
+
+        ];
+
+
+        // CREATE UNIQUE SESSION SCENARIOS
+
+        function createSessionScenarios() {
+
+            sessionScenarios = [...scenarios];
+
+            // Shuffle scenarios
+            for (let i = sessionScenarios.length - 1; i > 0; i--) {
+
+                let j = Math.floor(Math.random() * (i + 1));
+
+                [sessionScenarios[i], sessionScenarios[j]] =
+                    [sessionScenarios[j], sessionScenarios[i]];
+            }
+
+        }
+
+
+        createSessionScenarios();
+
+
+        // SELECT PASSENGER
+
+        function selectPassenger(number) {
+
+            // Do not allow interaction after session ends
+            if (completedScenarios >= scenarios.length) {
+                return;
+            }
+
+            clearInterval(timerInterval);
+
+            timeLeft = 30;
+
+            document.getElementById("timer").innerText =
+                timeLeft;
+
+            // Select next unused scenario
+            currentScenario =
+                sessionScenarios[completedScenarios];
+
+            scenarioStartTime = Date.now();
+
+            startTimer();
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Passenger ${number}</h2>
+
+                <p>
+                    ${currentScenario.description}
+                </p>
+
+                <h3>What would you do?</h3>
+
+                <button onclick="response('observe')">
+                    Observe
+                </button>
+
+                <button onclick="response('report')">
+                    Report to Crew
+                </button>
+
+                <button onclick="response('ignore')">
+                    Ignore
+                </button>
+
+            `;
+
+        }
+
+
+        // TIMER
+
+        function startTimer() {
+
+            timerInterval = setInterval(function () {
+
+                timeLeft--;
+
+                document.getElementById("timer").innerText =
+                    timeLeft;
+
+
+                if (timeLeft <= 0) {
+
+                    clearInterval(timerInterval);
+
+                    alert(
+                        "Time's up!\n\n" +
+                        "The response was not completed within the allowed time."
+                    );
+
+                    totalResponseTime += 30;
+
+                    completedScenarios++;
+
+                    nextScenario();
+
+                }
+
+            }, 1000);
+
+        }
+
+
+        // RESPONSE
+
+        async function response(action) {
+
+    clearInterval(timerInterval);
+
+    let responseTime =
+        Math.round((Date.now() - scenarioStartTime) / 1000);
+
+    totalResponseTime += responseTime;
+
+    try {
+
+        const apiResponse = await fetch(
+            "http://127.0.0.1:5000/api/evaluate",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    trainee: username,
+
+                    scenario: currentScenario.correct,
+
+                    decision: action,
+
+                    response_time: responseTime
+
+                })
+            }
+        );
+
+
+        const result = await apiResponse.json();
+
+
+        if (result.result === "Correct") {
+
+            score += result.score;
+
+            correctAnswers++;
+
+            alert(
+                "Correct response!\n\n" +
+                result.feedback
+            );
+
+        } else {
+
+            score -= 5;
+
+            alert(
+                "Needs Improvement.\n\n" +
+                result.feedback
+            );
+
+        }
+
+
+        if (score < 0) {
+
+            score = 0;
+
+        }
+
+
+        document.getElementById("score").innerText =
+            score;
+
+
+        completedScenarios++;
+
+        nextScenario();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Could not connect to the Flask backend.\n\n" +
+            "Make sure the Flask server is running."
+        );
+
+    }
+
+}
+
+        // NEXT SCENARIO
+
+        function nextScenario() {
+
+            if (completedScenarios >= scenarios.length) {
+
+                finishTraining();
+
+                return;
+
+            }
+
+
+            scenarioCount++;
+
+            document.getElementById("scenarioNumber").innerText =
+                scenarioCount + " / " + scenarios.length;
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Next Scenario</h2>
+
+                <p>
+                    Select another passenger to continue training.
+                </p>
+
+            `;
+
+        }
+
+
+        // FINISH TRAINING
+
+        function finishTraining() {
+
+            clearInterval(timerInterval);
+
+            let averageResponseTime =
+                Math.round(totalResponseTime / scenarios.length);
+
+            let percentage =
+                Math.round((score / 50) * 100);
+
+            let performance;
+
+            if (percentage >= 80) {
+
+                performance = "Excellent";
+
+            } else if (percentage >= 60) {
+
+                performance = "Good";
+
+            } else if (percentage >= 40) {
+
+                performance = "Needs Improvement";
+
+            } else {
+
+                performance = "Requires Further Training";
+
+            }
+
+
+            document.getElementById("scenarioNumber").innerText =
+                "Complete";
+
+            document.getElementById("timer").innerText =
+                "0";
+            localStorage.setItem("trainingResult", JSON.stringify({
+
+    username: username,
+
+    score: score,
+
+    completed: scenarios.length,
+
+    correct: correctAnswers,
+
+    averageTime: averageResponseTime,
+
+    performance: performance,
+
+    feedback:
+        "Continue practicing situational awareness, decision-making and response time."
+
+}));
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Training Completed</h2>
+
+                <p>
+                    <strong>Trainee:</strong> ${username}
+                </p>
+
+                <p>
+                    <strong>Scenarios Completed:</strong>
+                    ${scenarios.length} / ${scenarios.length}
+                </p>
+
+                <p>
+                    <strong>Final Score:</strong>
+                    ${score} / 50
+                </p>
+
+                <p>
+                    <strong>Correct Decisions:</strong>
+                    ${correctAnswers} / ${scenarios.length}
+                </p>
+
+                <p>
+                    <strong>Average Response Time:</strong>
+                    ${averageResponseTime} seconds
+                </p>
+
+                <p>
+                    <strong>Performance:</strong>
+                    ${performance}
+                </p>
+
+                <h3>Training Feedback</h3>
+
+                <p>
+                    The session has been completed. Continue practicing
+                    situational awareness, decision-making and response time.
+                </p>
+
+                <button onclick="window.location.href='dashboard.html'">
+    View Performance Dashboard
+</button>
+            `;
+
+        }
+
+    </script>
+
+</body>
+
+</html>

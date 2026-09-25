@@ -27,7 +27,7 @@
 
             <div>
                 <strong>Scenario</strong>
-                <span id="scenarioNumber">1</span>
+                <span id="scenarioNumber">1 / 5</span>
             </div>
 
             <div>
@@ -91,11 +91,15 @@
 
     <script>
 
+        // USER
+
         let username = localStorage.getItem("username");
 
         document.getElementById("welcome").innerText =
             "Welcome, " + username;
 
+
+        // SESSION VARIABLES
 
         let score = 0;
 
@@ -106,6 +110,16 @@
         let timerInterval;
 
         let currentScenario;
+
+        let sessionScenarios = [];
+
+        let completedScenarios = 0;
+
+        let correctAnswers = 0;
+
+        let totalResponseTime = 0;
+
+        let scenarioStartTime;
 
 
         // SCENARIOS
@@ -150,26 +164,65 @@
 
                 explanation:
                     "Communication with the crew is important for coordinated assessment."
+            },
+
+            {
+                description:
+                    "A passenger attempts to enter a restricted area of the aircraft without authorization.",
+
+                correct: "report",
+
+                explanation:
+                    "The trainee should immediately communicate the situation to the appropriate crew member."
             }
 
         ];
+
+
+        // CREATE UNIQUE SESSION SCENARIOS
+
+        function createSessionScenarios() {
+
+            sessionScenarios = [...scenarios];
+
+            // Shuffle scenarios
+            for (let i = sessionScenarios.length - 1; i > 0; i--) {
+
+                let j = Math.floor(Math.random() * (i + 1));
+
+                [sessionScenarios[i], sessionScenarios[j]] =
+                    [sessionScenarios[j], sessionScenarios[i]];
+            }
+
+        }
+
+
+        createSessionScenarios();
 
 
         // SELECT PASSENGER
 
         function selectPassenger(number) {
 
+            // Do not allow interaction after session ends
+            if (completedScenarios >= scenarios.length) {
+                return;
+            }
+
             clearInterval(timerInterval);
 
             timeLeft = 30;
 
-            document.getElementById("timer").innerText = timeLeft;
+            document.getElementById("timer").innerText =
+                timeLeft;
+
+            // Select next unused scenario
+            currentScenario =
+                sessionScenarios[completedScenarios];
+
+            scenarioStartTime = Date.now();
 
             startTimer();
-
-
-            currentScenario =
-                scenarios[Math.floor(Math.random() * scenarios.length)];
 
 
             document.getElementById("scenario").innerHTML = `
@@ -215,7 +268,14 @@
 
                     clearInterval(timerInterval);
 
-                    alert("Time's up!");
+                    alert(
+                        "Time's up!\n\n" +
+                        "The response was not completed within the allowed time."
+                    );
+
+                    totalResponseTime += 30;
+
+                    completedScenarios++;
 
                     nextScenario();
 
@@ -228,56 +288,113 @@
 
         // RESPONSE
 
-        function response(action) {
+        async function response(action) {
 
-            clearInterval(timerInterval);
+    clearInterval(timerInterval);
 
+    let responseTime =
+        Math.round((Date.now() - scenarioStartTime) / 1000);
 
-            if (action === currentScenario.correct) {
+    totalResponseTime += responseTime;
 
-                score += 10;
+    try {
 
-                alert(
-                    "Correct response!\n\n" +
-                    currentScenario.explanation
-                );
+        const apiResponse = await fetch(
+            "http://127.0.0.1:5000/api/evaluate",
+            {
+                method: "POST",
 
-            } else {
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-                score -= 5;
+                body: JSON.stringify({
 
-                alert(
-                    "Not the best response.\n\n" +
-                    currentScenario.explanation
-                );
+                    trainee: username,
 
+                    scenario: currentScenario.correct,
+
+                    decision: action,
+
+                    response_time: responseTime
+
+                })
             }
+        );
 
 
-            if (score < 0) {
-
-                score = 0;
-
-            }
+        const result = await apiResponse.json();
 
 
-            document.getElementById("score").innerText =
-                score;
+        if (result.result === "Correct") {
 
+            score += result.score;
 
-            nextScenario();
+            correctAnswers++;
+
+            alert(
+                "Correct response!\n\n" +
+                result.feedback
+            );
+
+        } else {
+
+            score -= 5;
+
+            alert(
+                "Needs Improvement.\n\n" +
+                result.feedback
+            );
 
         }
 
+
+        if (score < 0) {
+
+            score = 0;
+
+        }
+
+
+        document.getElementById("score").innerText =
+            score;
+
+
+        completedScenarios++;
+
+        nextScenario();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "Could not connect to the Flask backend.\n\n" +
+            "Make sure the Flask server is running."
+        );
+
+    }
+
+}
 
         // NEXT SCENARIO
 
         function nextScenario() {
 
+            if (completedScenarios >= scenarios.length) {
+
+                finishTraining();
+
+                return;
+
+            }
+
+
             scenarioCount++;
 
             document.getElementById("scenarioNumber").innerText =
-                scenarioCount;
+                scenarioCount + " / " + scenarios.length;
 
 
             document.getElementById("scenario").innerHTML = `
@@ -288,6 +405,112 @@
                     Select another passenger to continue training.
                 </p>
 
+            `;
+
+        }
+
+
+        // FINISH TRAINING
+
+        function finishTraining() {
+
+            clearInterval(timerInterval);
+
+            let averageResponseTime =
+                Math.round(totalResponseTime / scenarios.length);
+
+            let percentage =
+                Math.round((score / 50) * 100);
+
+            let performance;
+
+            if (percentage >= 80) {
+
+                performance = "Excellent";
+
+            } else if (percentage >= 60) {
+
+                performance = "Good";
+
+            } else if (percentage >= 40) {
+
+                performance = "Needs Improvement";
+
+            } else {
+
+                performance = "Requires Further Training";
+
+            }
+
+
+            document.getElementById("scenarioNumber").innerText =
+                "Complete";
+
+            document.getElementById("timer").innerText =
+                "0";
+            localStorage.setItem("trainingResult", JSON.stringify({
+
+    username: username,
+
+    score: score,
+
+    completed: scenarios.length,
+
+    correct: correctAnswers,
+
+    averageTime: averageResponseTime,
+
+    performance: performance,
+
+    feedback:
+        "Continue practicing situational awareness, decision-making and response time."
+
+}));
+
+
+            document.getElementById("scenario").innerHTML = `
+
+                <h2>Training Completed</h2>
+
+                <p>
+                    <strong>Trainee:</strong> ${username}
+                </p>
+
+                <p>
+                    <strong>Scenarios Completed:</strong>
+                    ${scenarios.length} / ${scenarios.length}
+                </p>
+
+                <p>
+                    <strong>Final Score:</strong>
+                    ${score} / 50
+                </p>
+
+                <p>
+                    <strong>Correct Decisions:</strong>
+                    ${correctAnswers} / ${scenarios.length}
+                </p>
+
+                <p>
+                    <strong>Average Response Time:</strong>
+                    ${averageResponseTime} seconds
+                </p>
+
+                <p>
+                    <strong>Performance:</strong>
+                    ${performance}
+                </p>
+
+                <h3>Training Feedback</h3>
+
+                <p>
+                    The session has been completed. Continue practicing
+                    situational awareness, decision-making and response time.
+                </p>
+
+                <button onclick="window.location.href='dashboard.html'">
+    View Performance Dashboard
+</button>
             `;
 
         }

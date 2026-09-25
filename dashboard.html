@@ -1,1 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Training Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+
+        <h1>Training Performance Dashboard</h1>
+
+        <p id="traineeName"></p>
+
+        <div class="dashboard-cards">
+
+            <div class="dashboard-card">
+                <h3>Final Score</h3>
+                <p id="finalScore">--</p>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>Scenarios</h3>
+                <p id="scenariosCompleted">--</p>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>Correct Decisions</h3>
+                <p id="correctDecisions">--</p>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>Avg Response Time</h3>
+                <p id="responseTime">--</p>
+            </div>
+
+        </div>
+
+
+        <div class="performance-box">
+
+            <h2>Performance Level</h2>
+
+            <p id="performanceLevel">
+                No training session completed yet.
+            </p>
+
+        </div>
+
+
+        <div class="feedback-box">
+
+            <h2>Training Feedback</h2>
+
+            <p id="feedback">
+                Complete a training session to receive performance feedback.
+            </p>
+
+        </div>
+
+
+        <button onclick="startNewTraining()">
+            Start New Training
+        </button>
+
+    </div>
+
+
+    <script>
+
+        // Get saved training results
+
+        const result =
+            JSON.parse(localStorage.getItem("trainingResult"));
+
+
+        if (result) {
+
+            document.getElementById("traineeName").innerText =
+                "Trainee: " + result.username;
+
+            document.getElementById("finalScore").innerText =
+                result.score + " / 50";
+
+            document.getElementById("scenariosCompleted").innerText =
+                result.completed + " / 5";
+
+            document.getElementById("correctDecisions").innerText =
+                result.correct + " / 5";
+
+            document.getElementById("responseTime").innerText =
+                result.averageTime + " seconds";
+
+            document.getElementById("performanceLevel").innerText =
+                result.performance;
+
+            document.getElementById("feedback").innerText =
+                result.feedback;
+
+        }
+
+
+        function startNewTraining() {
+
+            window.location.href = "index.html";
+
+        }
+
+    </script>
+
+</body>
+
+</html>
