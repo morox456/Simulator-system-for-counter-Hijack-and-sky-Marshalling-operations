@@ -1,4 +1,4 @@
-
+from database import initialize_database
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -7,7 +7,7 @@ from database import save_result, get_all_results
 
 app = Flask(__name__)
 CORS(app)
-
+initialize_database()
 
 @app.route("/", methods=["GET"])
 def home():
