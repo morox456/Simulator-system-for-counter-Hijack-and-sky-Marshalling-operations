@@ -1,119 +1,298 @@
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sky Marshal - Performance Dashboard</title>
 
-    <title>Training Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
 
-    <link rel="stylesheet" href="style.css">
+    body {
+      margin: 0;
+      padding: 25px;
+      font-family: Arial, sans-serif;
+      background: #101820;
+      color: white;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 { text-align: center; }
+
+    .subtitle {
+      text-align: center;
+      color: #b8c7d9;
+      margin-bottom: 25px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 6px;
+      background: #2196f3;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover { background: #0879d1; }
+
+    #status { color: #b8c7d9; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 25px;
+    }
+
+    .card, .panel {
+      background: #1d2a38;
+      padding: 22px;
+      border-radius: 10px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      color: #b8c7d9;
+      margin-top: 0;
+    }
+
+    .number {
+      font-size: 30px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .panel { margin-bottom: 25px; }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 13px;
+      border-bottom: 1px solid #394655;
+    }
+
+    th { color: #80c5ff; }
+
+    .correct { color: #69e6a0; font-weight: bold; }
+    .incorrect { color: #ff9292; font-weight: bold; }
+    .error { color: #ff9292; }
+
+    .empty {
+      padding: 25px;
+      text-align: center;
+      color: #b8c7d9;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="container">
+    <h1>Sky Marshal Simulator</h1>
+    <p class="subtitle">Training Performance Dashboard</p>
 
-    <div class="dashboard-container">
-
-        <h1>Training Performance Dashboard</h1>
-
-        <p id="traineeName"></p>
-
-        <div class="dashboard-cards">
-
-            <div class="dashboard-card">
-                <h3>Final Score</h3>
-                <p id="finalScore">--</p>
-            </div>
-
-            <div class="dashboard-card">
-                <h3>Scenarios</h3>
-                <p id="scenariosCompleted">--</p>
-            </div>
-
-            <div class="dashboard-card">
-                <h3>Correct Decisions</h3>
-                <p id="correctDecisions">--</p>
-            </div>
-
-            <div class="dashboard-card">
-                <h3>Avg Response Time</h3>
-                <p id="responseTime">--</p>
-            </div>
-
-        </div>
-
-
-        <div class="performance-box">
-
-            <h2>Performance Level</h2>
-
-            <p id="performanceLevel">
-                No training session completed yet.
-            </p>
-
-        </div>
-
-
-        <div class="feedback-box">
-
-            <h2>Training Feedback</h2>
-
-            <p id="feedback">
-                Complete a training session to receive performance feedback.
-            </p>
-
-        </div>
-
-
-        <button onclick="startNewTraining()">
-            Start New Training
-        </button>
-
+    <div class="actions">
+      <span id="status">Connecting to training database...</span>
+      <button onclick="loadResults()">Refresh Results</button>
     </div>
 
+    <div class="cards">
+      <div class="card">
+        <h3>Total Attempts</h3>
+        <div class="number" id="attempts">—</div>
+      </div>
 
-    <script>
+      <div class="card">
+        <h3>Trainees</h3>
+        <div class="number" id="trainees">—</div>
+      </div>
 
-        // Get saved training results
+      <div class="card">
+        <h3>Correct Decisions</h3>
+        <div class="number" id="correct">—</div>
+      </div>
 
-        const result =
-            JSON.parse(localStorage.getItem("trainingResult"));
+      <div class="card">
+        <h3>Average Score</h3>
+        <div class="number" id="averageScore">—</div>
+      </div>
 
+      <div class="card">
+        <h3>Average Response Time</h3>
+        <div class="number" id="averageTime">—</div>
+      </div>
 
-        if (result) {
+      <div class="card">
+        <h3>Accuracy</h3>
+        <div class="number" id="accuracy">—</div>
+      </div>
+    </div>
 
-            document.getElementById("traineeName").innerText =
-                "Trainee: " + result.username;
+    <div class="panel">
+      <h2>Training History</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Trainee</th>
+              <th>Scenario</th>
+              <th>Decision</th>
+              <th>Result</th>
+              <th>Score</th>
+              <th>Response Time</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="7" class="empty">Loading results...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-            document.getElementById("finalScore").innerText =
-                result.score + " / 50";
+  <script>
+    const API_URL =
+      "https://sky-marshal-backend.onrender.com/api/results";
 
-            document.getElementById("scenariosCompleted").innerText =
-                result.completed + " / 5";
+    async function loadResults() {
+      const status = document.getElementById("status");
+      const body = document.getElementById("resultsBody");
 
-            document.getElementById("correctDecisions").innerText =
-                result.correct + " / 5";
+      status.textContent = "Loading results...";
+      body.innerHTML =
+        '<tr><td colspan="7" class="empty">Loading...</td></tr>';
 
-            document.getElementById("responseTime").innerText =
-                result.averageTime + " seconds";
+      try {
+        const response = await fetch(API_URL, { cache: "no-store" });
 
-            document.getElementById("performanceLevel").innerText =
-                result.performance;
-
-            document.getElementById("feedback").innerText =
-                result.feedback;
-
+        if (!response.ok) {
+          throw new Error("Server returned HTTP " + response.status);
         }
 
+        const results = await response.json();
 
-        function startNewTraining() {
-
-            window.location.href = "index.html";
-
+        if (!Array.isArray(results)) {
+          throw new Error(results.error || "Unexpected API response");
         }
 
-    </script>
+        const correctCount = results.filter(
+          item => item.result === "Correct"
+        ).length;
 
+        const totalScore = results.reduce(
+          (sum, item) => sum + (Number(item.score) || 0), 0
+        );
+
+        const totalTime = results.reduce(
+          (sum, item) => sum + (Number(item.response_time) || 0), 0
+        );
+
+        const uniqueTrainees = new Set(
+          results.map(item => item.trainee || "Guest")
+        );
+
+        const count = results.length;
+
+        document.getElementById("attempts").textContent = count;
+        document.getElementById("trainees").textContent =
+          uniqueTrainees.size;
+
+        document.getElementById("correct").textContent =
+          correctCount + " / " + count;
+
+        document.getElementById("averageScore").textContent =
+          count ? (totalScore / count).toFixed(1) + " / 10" : "0 / 10";
+
+        document.getElementById("averageTime").textContent =
+          count ? (totalTime / count).toFixed(1) + " sec" : "0 sec";
+
+        document.getElementById("accuracy").textContent =
+          count ? ((correctCount / count) * 100).toFixed(1) + "%" : "0%";
+
+        if (count === 0) {
+          body.innerHTML =
+            '<tr><td colspan="7" class="empty">' +
+            'No training results yet. Complete a simulator scenario first.' +
+            '</td></tr>';
+
+          status.textContent = "Connected — no results yet.";
+          return;
+        }
+
+        body.innerHTML = results.map(item => {
+          const isCorrect = item.result === "Correct";
+          const date = item.created_at
+  ? new Date(item.created_at.replace(" ", "T") + "Z").toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    })
+  : "—";
+          return `
+            <tr>
+              <td>${escapeHTML(item.trainee || "Guest")}</td>
+              <td>${escapeHTML(item.scenario ?? "—")}</td>
+              <td>${escapeHTML(item.decision || "—")}</td>
+              <td class="${isCorrect ? "correct" : "incorrect"}">
+                ${escapeHTML(item.result || "Unknown")}
+              </td>
+              <td>${Number(item.score) || 0} / 10</td>
+              <td>${Number(item.response_time || 0)} sec</td>
+              <td>${escapeHTML(date)}</td>
+            </tr>`;
+        }).join("");
+
+        status.textContent = "Connected — " + count + " attempts loaded.";
+
+      } catch (error) {
+        console.error("Dashboard error:", error);
+
+      status.textContent = "Connection error: " + error.message;
+status.className = "error";
+
+        body.innerHTML =
+          '<tr><td colspan="7" class="empty error">' +
+          'Unable to retrieve training results. Check the Render service, ' +
+          'API endpoint and browser console.' +
+          '</td></tr>';
+      }
+    }
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    loadResults();
+  </script>
 </body>
-
 </html>
