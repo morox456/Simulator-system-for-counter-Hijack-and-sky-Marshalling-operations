@@ -8,13 +8,114 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
-        #responseFeedback {
-            margin-top: 20px;
-            padding: 18px;
+        .simulator-container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stats > div {
+            min-width: 100px;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            background: #172333;
+            color: white;
+        }
+
+        .stats strong,
+        .stats span {
+            display: block;
+            margin: 5px;
+        }
+
+        .aircraft {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px 15px;
+            max-width: 560px;
+            margin: 25px auto;
+            padding: 35px;
+            background: #d7dce2;
+            border-radius: 90px;
+            color: white;
+        }
+
+        .passenger,
+        .crew,
+        .marshal {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 55px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .passenger {
+            background: #1264a3;
+            cursor: pointer;
+        }
+
+        .passenger:hover {
+            background: #0c4c7e;
+        }
+
+        .crew {
+            background: #23733a;
+        }
+
+        .marshal {
+            grid-column: span 2;
+            background: #a72c2c;
+        }
+
+        #scenario {
+            max-width: 650px;
+            margin: 25px auto;
+            padding: 25px;
+            text-align: center;
             border-radius: 10px;
+            background: #111c29;
+            color: white;
+        }
+
+        #scenario button {
+            margin: 7px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 6px;
+            background: #1676bd;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #scenario button:hover {
+            background: #0d568d;
+        }
+
+        #scenario button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #responseFeedback {
+            padding: 20px;
+            margin-top: 15px;
+            text-align: left;
             background: #1d2a38;
             border-left: 5px solid #2196f3;
-            color: white;
+            border-radius: 8px;
+            overflow-wrap: anywhere;
         }
 
         #responseFeedback h3 {
@@ -25,26 +126,50 @@
             line-height: 1.6;
         }
 
-        #continueButton {
-            margin-top: 10px;
-            padding: 11px 20px;
-            border: none;
-            border-radius: 6px;
-            background: #2196f3;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
+        #feedbackTitle.correct {
+            color: #58d68d;
+        }
+
+        #feedbackTitle.incorrect {
+            color: #ff8585;
         }
 
         #saveStatus {
             font-size: 13px;
-            color: #b8c7d9;
+            color: #c3d1df;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 600px) {
+            .simulator-container {
+                padding: 10px;
+            }
+
+            .aircraft {
+                gap: 10px;
+                padding: 20px;
+                border-radius: 45px;
+            }
+
+            .passenger,
+            .crew,
+            .marshal {
+                min-height: 45px;
+                font-size: 12px;
+            }
+
+            #scenario {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="simulator-container">
+    <main class="simulator-container">
         <h1>Virtual Aircraft Simulator</h1>
         <p id="welcome"></p>
 
@@ -53,34 +178,38 @@
                 <strong>Score</strong>
                 <span id="score">0</span>
             </div>
+
             <div>
                 <strong>Scenario</strong>
                 <span id="scenarioNumber">1 / 5</span>
             </div>
+
             <div>
                 <strong>Time</strong>
                 <span><span id="timer">30</span>s</span>
             </div>
         </div>
 
-        <div class="aircraft">
-            <div class="passenger" onclick="selectPassenger(1)">P1</div>
-            <div class="passenger" onclick="selectPassenger(2)">P2</div>
-            <div class="passenger" onclick="selectPassenger(3)">P3</div>
-            <div class="passenger" onclick="selectPassenger(4)">P4</div>
-            <div class="passenger" onclick="selectPassenger(5)">P5</div>
-            <div class="passenger" onclick="selectPassenger(6)">P6</div>
+        <section class="aircraft" aria-label="Virtual aircraft cabin">
+            <button class="passenger" onclick="selectPassenger(1)">P1</button>
+            <button class="passenger" onclick="selectPassenger(2)">P2</button>
+            <button class="passenger" onclick="selectPassenger(3)">P3</button>
+            <button class="passenger" onclick="selectPassenger(4)">P4</button>
+            <button class="passenger" onclick="selectPassenger(5)">P5</button>
+            <button class="passenger" onclick="selectPassenger(6)">P6</button>
             <div class="crew">CREW</div>
             <div class="marshal">SKY MARSHAL</div>
-        </div>
+        </section>
 
-        <div id="scenario">
-            <h2>Scenario</h2>
-            <p>Select a passenger to begin the simulation.</p>
-        </div>
-    </div>
+        <section id="scenario" aria-live="polite">
+            <h2>Ready to Begin?</h2>
+            <p>Select a passenger to start your first training scenario.</p>
+        </section>
+    </main>
 
     <script>
+        "use strict";
+
         const API_BASE =
             "https://sky-marshal-backend.onrender.com/api";
 
@@ -106,7 +235,7 @@
             {
                 id: "1",
                 description:
-                    "A passenger is repeatedly looking around the cabin and behaving unusually.",
+                    "A passenger repeatedly looks around the cabin and behaves unusually.",
                 correct: "observe",
                 explanation:
                     "The expected response is to observe and assess the situation carefully. Unusual behavior alone does not prove wrongdoing."
@@ -114,7 +243,7 @@
             {
                 id: "2",
                 description:
-                    "A passenger reports unusual behavior from another passenger.",
+                    "A passenger reports unusual behavior by another passenger.",
                 correct: "report",
                 explanation:
                     "The expected response is to communicate the report to the cabin crew for appropriate assessment."
@@ -130,10 +259,10 @@
             {
                 id: "4",
                 description:
-                    "Cabin crew informs you about a suspicious situation involving a passenger.",
+                    "A cabin crew member informs you about a concerning passenger situation.",
                 correct: "report",
                 explanation:
-                    "The expected response is to communicate and coordinate with the crew."
+                    "The expected response is to communicate and coordinate with the cabin crew."
             },
             {
                 id: "5",
@@ -151,12 +280,15 @@
             for (let i = sessionScenarios.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
 
-                [sessionScenarios[i], sessionScenarios[j]] =
-                    [sessionScenarios[j], sessionScenarios[i]];
+                [
+                    sessionScenarios[i],
+                    sessionScenarios[j]
+                ] = [
+                    sessionScenarios[j],
+                    sessionScenarios[i]
+                ];
             }
         }
-
-        createSessionScenarios();
 
         function selectPassenger(number) {
             if (
@@ -175,19 +307,39 @@
             scenarioStartTime = Date.now();
 
             document.getElementById("timer").textContent = timeLeft;
+
             document.getElementById("scenarioNumber").textContent =
                 (completedScenarios + 1) + " / " + scenarios.length;
 
-            document.getElementById("scenario").innerHTML = `
-                <h2>Passenger ${number}</h2>
-                <p>${escapeHTML(currentScenario.description)}</p>
-                <h3>What would you do?</h3>
-                <button onclick="response('observe')">Observe</button>
-                <button onclick="response('report')">Report to Crew</button>
-                <button onclick="response('ignore')">Ignore</button>
-            `;
+            const scenarioBox = document.getElementById("scenario");
+            scenarioBox.replaceChildren();
+
+            const heading = document.createElement("h2");
+            heading.textContent = "Passenger " + number;
+
+            const description = document.createElement("p");
+            description.textContent = currentScenario.description;
+
+            const question = document.createElement("h3");
+            question.textContent = "What would you do?";
+
+            scenarioBox.append(heading, description, question);
+
+            addDecisionButton(scenarioBox, "Observe", "observe");
+            addDecisionButton(scenarioBox, "Report to Crew", "report");
+            addDecisionButton(scenarioBox, "Ignore", "ignore");
 
             startTimer();
+        }
+
+        function addDecisionButton(container, label, action) {
+            const button = document.createElement("button");
+
+            button.textContent = label;
+            button.type = "button";
+            button.onclick = () => response(action);
+
+            container.appendChild(button);
         }
 
         function startTimer() {
@@ -198,12 +350,12 @@
                     return;
                 }
 
-                timeLeft--;
+                timeLeft = Math.max(0, timeLeft - 1);
 
                 document.getElementById("timer").textContent =
-                    Math.max(0, timeLeft);
+                    timeLeft;
 
-                if (timeLeft <= 0) {
+                if (timeLeft === 0) {
                     clearInterval(timerInterval);
                     handleTimeout();
                 }
@@ -213,7 +365,7 @@
         async function submitResult(scenario, action, responseTime) {
             try {
                 const apiResponse = await fetch(
-                    `${API_BASE}/evaluate`,
+                    API_BASE + "/evaluate",
                     {
                         method: "POST",
                         headers: {
@@ -239,7 +391,7 @@
                 if (!apiResponse.ok) {
                     throw new Error(
                         data.error ||
-                        `Server returned HTTP ${apiResponse.status}`
+                        "Server returned HTTP " + apiResponse.status
                     );
                 }
 
@@ -255,7 +407,10 @@
                             : ""
                 };
             } catch (error) {
-                console.error("Training result could not be saved:", error);
+                console.error(
+                    "Training result could not be saved:",
+                    error
+                );
 
                 return {
                     saved: false,
@@ -286,16 +441,12 @@
                 30,
                 Math.max(
                     0,
-                    Math.round(
-                        (Date.now() - scenarioStartTime) / 1000
-                    )
+                    Math.round((Date.now() - scenarioStartTime) / 1000)
                 )
             );
 
             totalResponseTime += responseTime;
 
-            // The scenario's expected action is the local reference
-            // for scoring. The backend stores the submitted decision.
             const isCorrect = action === answeredScenario.correct;
 
             if (isCorrect) {
@@ -307,32 +458,31 @@
 
             document.getElementById("score").textContent = score;
 
+            // Save to the backend, but do not rely on its feedback field.
             const serverResult = await submitResult(
                 answeredScenario,
                 action,
                 responseTime
             );
 
-            let title;
-            let feedback;
+            const title = isCorrect
+                ? "Correct response!"
+                : "Needs Improvement";
 
-            if (isCorrect) {
-                title = "Correct response!";
-                feedback = answeredScenario.explanation;
-            } else {
-                title = "Needs Improvement";
-                feedback =
-                    "Your selected action was not the expected response. " +
-                    answeredScenario.explanation;
-            }
+            // Always use the local explanation as a safe fallback.
+            let feedback = isCorrect
+                ? answeredScenario.explanation
+                : "Your selected action was not the expected response. " +
+                  answeredScenario.explanation;
 
-            // Use backend feedback if it is a valid non-empty string.
             if (
                 serverResult.saved &&
-                typeof serverResult.feedback === "string" &&
-                serverResult.feedback.trim() !== ""
+                serverResult.feedback &&
+                serverResult.feedback.trim()
             ) {
-                feedback = serverResult.feedback;
+                // Keep the scenario explanation even if the backend
+                // returns a generic or incomplete message.
+                feedback = answeredScenario.explanation;
             }
 
             showFeedback(
@@ -357,6 +507,9 @@
 
             const timedOutScenario = currentScenario;
             totalResponseTime += 30;
+            score = Math.max(0, score - 5);
+
+            document.getElementById("score").textContent = score;
 
             const serverResult = await submitResult(
                 timedOutScenario,
@@ -364,18 +517,11 @@
                 30
             );
 
-            score = Math.max(0, score - 5);
-
-            document.getElementById("score").textContent = score;
-
-            const message =
-                "Time expired. " +
-                timedOutScenario.explanation +
-                " Try to make your decision within the allowed time.";
-
             showFeedback(
                 "Time's up!",
-                message,
+                "Time expired. " +
+                    timedOutScenario.explanation +
+                    " Try to make your decision within the allowed time.",
                 serverResult.saved,
                 30
             );
@@ -383,20 +529,24 @@
 
         function showFeedback(title, message, saved, responseTime) {
             const scenarioBox = document.getElementById("scenario");
-
-            scenarioBox.innerHTML = "";
+            scenarioBox.replaceChildren();
 
             const feedbackBox = document.createElement("div");
             feedbackBox.id = "responseFeedback";
 
             const heading = document.createElement("h3");
+            heading.id = "feedbackTitle";
             heading.textContent = title || "Training Feedback";
+            heading.className =
+                title === "Correct response!" ? "correct" : "incorrect";
 
             const paragraph = document.createElement("p");
+
+            // Never display the JavaScript value "undefined".
             paragraph.textContent =
                 typeof message === "string" && message.trim()
                     ? message
-                    : "Review the scenario and continue your training.";
+                    : "Review the scenario explanation and continue your training.";
 
             const timeParagraph = document.createElement("p");
             timeParagraph.textContent =
@@ -406,10 +556,10 @@
             saveStatus.id = "saveStatus";
             saveStatus.textContent = saved
                 ? "Training result saved to the server."
-                : "Result could not be saved to the server. Your local simulation can continue.";
+                : "Could not save this result to the server. You can continue training.";
 
             const continueButton = document.createElement("button");
-            continueButton.id = "continueButton";
+            continueButton.type = "button";
             continueButton.textContent =
                 completedScenarios + 1 >= scenarios.length
                     ? "View Final Results"
@@ -417,11 +567,13 @@
 
             continueButton.onclick = continueTraining;
 
-            feedbackBox.appendChild(heading);
-            feedbackBox.appendChild(paragraph);
-            feedbackBox.appendChild(timeParagraph);
-            feedbackBox.appendChild(saveStatus);
-            feedbackBox.appendChild(continueButton);
+            feedbackBox.append(
+                heading,
+                paragraph,
+                timeParagraph,
+                saveStatus,
+                continueButton
+            );
 
             scenarioBox.appendChild(feedbackBox);
         }
@@ -445,10 +597,17 @@
 
             document.getElementById("timer").textContent = "30";
 
-            document.getElementById("scenario").innerHTML = `
-                <h2>Next Scenario</h2>
-                <p>Select a passenger to continue your training.</p>
-            `;
+            const scenarioBox = document.getElementById("scenario");
+            scenarioBox.replaceChildren();
+
+            const heading = document.createElement("h2");
+            heading.textContent = "Next Scenario";
+
+            const paragraph = document.createElement("p");
+            paragraph.textContent =
+                "Select a passenger to continue your training.";
+
+            scenarioBox.append(heading, paragraph);
         }
 
         function finishTraining() {
@@ -458,6 +617,7 @@
                 totalResponseTime / scenarios.length
             );
 
+            // Maximum score is 50; the score cannot go below zero.
             const percentage = Math.round(
                 (score / (scenarios.length * 10)) * 100
             );
@@ -487,8 +647,7 @@
                 averageTime: averageResponseTime,
                 performance: performance,
                 feedback:
-                    "Continue practicing situational awareness, " +
-                    "decision-making and response time."
+                    "Continue practicing situational awareness, decision-making and response time."
             };
 
             localStorage.setItem(
@@ -496,39 +655,66 @@
                 JSON.stringify(trainingResult)
             );
 
-            document.getElementById("scenario").innerHTML = `
-                <h2>Training Completed</h2>
-                <p><strong>Trainee:</strong> ${escapeHTML(username)}</p>
-                <p><strong>Scenarios Completed:</strong>
-                    ${completedScenarios} / ${scenarios.length}</p>
-                <p><strong>Final Score:</strong>
-                    ${score} / ${scenarios.length * 10}</p>
-                <p><strong>Correct Decisions:</strong>
-                    ${correctAnswers} / ${scenarios.length}</p>
-                <p><strong>Average Response Time:</strong>
-                    ${averageResponseTime} seconds</p>
-                <p><strong>Performance:</strong>
-                    ${escapeHTML(performance)}</p>
-                <h3>Training Feedback</h3>
-                <p>${escapeHTML(trainingResult.feedback)}</p>
-                <button onclick="window.location.href='dashboard.html'">
-                    View Performance Dashboard
-                </button>
-                <button onclick="window.location.reload()">
-                    Train Again
-                </button>
-            `;
+            const scenarioBox = document.getElementById("scenario");
+            scenarioBox.replaceChildren();
+
+            addText(scenarioBox, "h2", "Training Completed");
+            addText(scenarioBox, "p", "Trainee: " + username);
+            addText(
+                scenarioBox,
+                "p",
+                "Scenarios Completed: " +
+                    completedScenarios + " / " + scenarios.length
+            );
+            addText(
+                scenarioBox,
+                "p",
+                "Final Score: " + score + " / " +
+                    (scenarios.length * 10)
+            );
+            addText(
+                scenarioBox,
+                "p",
+                "Correct Decisions: " +
+                    correctAnswers + " / " + scenarios.length
+            );
+            addText(
+                scenarioBox,
+                "p",
+                "Average Response Time: " +
+                    averageResponseTime + " seconds"
+            );
+            addText(
+                scenarioBox,
+                "p",
+                "Performance: " + performance
+            );
+
+            addText(scenarioBox, "h3", "Training Feedback");
+            addText(scenarioBox, "p", trainingResult.feedback);
+
+            const dashboardButton = document.createElement("button");
+            dashboardButton.textContent = "View Performance Dashboard";
+            dashboardButton.onclick = () => {
+                window.location.href = "dashboard.html";
+            };
+
+            const retryButton = document.createElement("button");
+            retryButton.textContent = "Train Again";
+            retryButton.onclick = () => {
+                window.location.reload();
+            };
+
+            scenarioBox.append(dashboardButton, retryButton);
         }
 
-        function escapeHTML(value) {
-            return String(value).replace(/[&<>"']/g, char => ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
-            })[char]);
+        function addText(container, tag, value) {
+            const element = document.createElement(tag);
+            element.textContent = value;
+            container.appendChild(element);
         }
+
+        createSessionScenarios();
     </script>
 </body>
 </html>
