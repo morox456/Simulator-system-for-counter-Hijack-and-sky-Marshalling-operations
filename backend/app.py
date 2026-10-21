@@ -1,15 +1,17 @@
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from database import initialize_database, save_result, get_all_results
 
 app = Flask(__name__)
 CORS(app)
 
+initialize_database()
+
 
 @app.route("/")
 def home():
-    return jsonify({
-        "message": "Sky Marshal Simulator Backend is running"
-    })
+    return jsonify({"message": "Sky Marshal Simulator Backend is running"})
 
 
 @app.route("/api/status")
@@ -23,53 +25,58 @@ def status():
 
 @app.route("/api/evaluate", methods=["POST"])
 def evaluate():
+    data = request.get_json(silent=True) or {}
 
-    data = request.get_json()
+    trainee = str(data.get("trainee", "Guest")).strip() or "Guest"
+    scenario = str(data.get("scenario", ""))
+    decision = str(data.get("decision", "")).strip().lower()
 
-    trainee = data.get("trainee", "Unknown")
-    scenario = data.get("scenario", "")
-    decision = data.get("decision", "")
-    response_time = data.get("response_time", 0)
+    try:
+        response_time = max(0, float(data.get("response_time", 0)))
+    except (TypeError, ValueError):
+        response_time = 0
 
-    # Basic evaluation rules
-    correct_decisions = {
-        "observe": "observe",
-        "report": "report"
-    }
+    if not scenario or not decision:
+        return jsonify({
+            "error": "Scenario and decision are required"
+        }), 400
 
-    correct_action = correct_decisions.get(scenario)
+    correct = decision == scenario.strip().lower()
+    result = "Correct" if correct else "Incorrect"
+    score = 10 if correct else 0
 
-    if decision == correct_action:
+    feedback = (
+        "Good decision. The selected response is appropriate "
+        "for the simulated situation."
+        if correct else
+        "Review the scenario and choose the response that best "
+        "matches the training guidance."
+    )
 
-        result = "Correct"
-        score = 10
-
-        feedback = (
-            "Good decision. The selected response "
-            "is appropriate for the simulated situation."
+    try:
+        save_result(
+            trainee, scenario, decision, result,
+            score, response_time
         )
-
-    else:
-
-        result = "Needs Improvement"
-        score = 0
-
-        feedback = (
-            "The selected response was not the expected "
-            "response for this simulated scenario."
-        )
+    except Exception:
+        app.logger.exception("Could not save trainee result")
+        return jsonify({"error": "Could not save training result"}), 500
 
     return jsonify({
-
-        "trainee": trainee,
-        "scenario": scenario,
-        "decision": decision,
-        "response_time": response_time,
         "result": result,
         "score": score,
-        "feedback": feedback
-
+        "feedback": feedback,
+        "response_time": response_time
     })
+
+
+@app.route("/api/results", methods=["GET"])
+def results():
+    try:
+        return jsonify(get_all_results())
+    except Exception:
+        app.logger.exception("Could not retrieve results")
+        return jsonify({"error": "Could not retrieve results"}), 500
 
 
 if __name__ == "__main__":
