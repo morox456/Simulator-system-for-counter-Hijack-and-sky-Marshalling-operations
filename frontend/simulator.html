@@ -6,16 +6,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sky Marshal Simulator</title>
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        #responseFeedback {
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 10px;
+            background: #1d2a38;
+            border-left: 5px solid #2196f3;
+            color: white;
+        }
+
+        #responseFeedback h3 {
+            margin-top: 0;
+        }
+
+        #responseFeedback p {
+            line-height: 1.6;
+        }
+
+        #continueButton {
+            margin-top: 10px;
+            padding: 11px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #2196f3;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #saveStatus {
+            font-size: 13px;
+            color: #b8c7d9;
+        }
+    </style>
 </head>
+
 <body>
     <div class="simulator-container">
         <h1>Virtual Aircraft Simulator</h1>
         <p id="welcome"></p>
 
         <div class="stats">
-            <div><strong>Score</strong><span id="score">0</span></div>
-            <div><strong>Scenario</strong><span id="scenarioNumber">1 / 5</span></div>
-            <div><strong>Time</strong><span><span id="timer">30</span>s</span></div>
+            <div>
+                <strong>Score</strong>
+                <span id="score">0</span>
+            </div>
+            <div>
+                <strong>Scenario</strong>
+                <span id="scenarioNumber">1 / 5</span>
+            </div>
+            <div>
+                <strong>Time</strong>
+                <span><span id="timer">30</span>s</span>
+            </div>
         </div>
 
         <div class="aircraft">
@@ -36,13 +81,16 @@
     </div>
 
     <script>
-        const API_BASE = "https://sky-marshal-backend.onrender.com/api";
+        const API_BASE =
+            "https://sky-marshal-backend.onrender.com/api";
 
-        const username = localStorage.getItem("username") || "Guest";
-        document.getElementById("welcome").textContent = "Welcome, " + username;
+        const username =
+            localStorage.getItem("username") || "Guest";
+
+        document.getElementById("welcome").textContent =
+            "Welcome, " + username;
 
         let score = 0;
-        let scenarioCount = 1;
         let timeLeft = 30;
         let timerInterval = null;
         let currentScenario = null;
@@ -52,37 +100,48 @@
         let totalResponseTime = 0;
         let scenarioStartTime = 0;
         let responseInProgress = false;
+        let scenarioActive = false;
 
         const scenarios = [
             {
                 id: "1",
-                description: "A passenger is repeatedly looking around the cabin and behaving unusually.",
+                description:
+                    "A passenger is repeatedly looking around the cabin and behaving unusually.",
                 correct: "observe",
-                explanation: "The trainee should first observe and assess the situation."
+                explanation:
+                    "The expected response is to observe and assess the situation carefully. Unusual behavior alone does not prove wrongdoing."
             },
             {
                 id: "2",
-                description: "A passenger reports unusual behavior from another passenger.",
+                description:
+                    "A passenger reports unusual behavior from another passenger.",
                 correct: "report",
-                explanation: "Communicate the report to the crew for further assessment."
+                explanation:
+                    "The expected response is to communicate the report to the cabin crew for appropriate assessment."
             },
             {
                 id: "3",
-                description: "A passenger appears nervous and repeatedly checks their surroundings.",
+                description:
+                    "A passenger appears nervous and repeatedly checks their surroundings.",
                 correct: "observe",
-                explanation: "Observe the situation first rather than causing unnecessary alarm."
+                explanation:
+                    "The expected response is to observe the situation without making assumptions based only on nervous behavior."
             },
             {
                 id: "4",
-                description: "Cabin crew informs you about a suspicious situation involving a passenger.",
+                description:
+                    "Cabin crew informs you about a suspicious situation involving a passenger.",
                 correct: "report",
-                explanation: "Communicate with the crew to support coordinated assessment."
+                explanation:
+                    "The expected response is to communicate and coordinate with the crew."
             },
             {
                 id: "5",
-                description: "A passenger attempts to enter a restricted aircraft area without authorization.",
+                description:
+                    "A passenger attempts to enter a restricted aircraft area without authorization.",
                 correct: "report",
-                explanation: "Report the situation to the appropriate crew member."
+                explanation:
+                    "The expected response is to report the unauthorized access to the appropriate crew member."
             }
         ];
 
@@ -91,6 +150,7 @@
 
             for (let i = sessionScenarios.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
+
                 [sessionScenarios[i], sessionScenarios[j]] =
                     [sessionScenarios[j], sessionScenarios[i]];
             }
@@ -99,19 +159,28 @@
         createSessionScenarios();
 
         function selectPassenger(number) {
-            if (completedScenarios >= scenarios.length || responseInProgress) return;
+            if (
+                completedScenarios >= scenarios.length ||
+                responseInProgress ||
+                scenarioActive
+            ) {
+                return;
+            }
 
             clearInterval(timerInterval);
-            timeLeft = 30;
-            document.getElementById("timer").textContent = timeLeft;
 
             currentScenario = sessionScenarios[completedScenarios];
+            timeLeft = 30;
+            scenarioActive = true;
             scenarioStartTime = Date.now();
-            responseInProgress = false;
+
+            document.getElementById("timer").textContent = timeLeft;
+            document.getElementById("scenarioNumber").textContent =
+                (completedScenarios + 1) + " / " + scenarios.length;
 
             document.getElementById("scenario").innerHTML = `
                 <h2>Passenger ${number}</h2>
-                <p>${currentScenario.description}</p>
+                <p>${escapeHTML(currentScenario.description)}</p>
                 <h3>What would you do?</h3>
                 <button onclick="response('observe')">Observe</button>
                 <button onclick="response('report')">Report to Crew</button>
@@ -124,185 +193,261 @@
         function startTimer() {
             clearInterval(timerInterval);
 
-            timerInterval = setInterval(async () => {
+            timerInterval = setInterval(() => {
+                if (!scenarioActive || responseInProgress) {
+                    return;
+                }
+
                 timeLeft--;
-                document.getElementById("timer").textContent = timeLeft;
+
+                document.getElementById("timer").textContent =
+                    Math.max(0, timeLeft);
 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-
-                    if (responseInProgress || !currentScenario) return;
-                    responseInProgress = true;
-
-                    const timedOutScenario = currentScenario;
-                    totalResponseTime += 30;
-
-                    showFeedback(
-                        "Time's up!",
-                        "Your response time expired. Review the scenario and try to make your decision within the time limit."
-                    );
-
-                    await submitResult(timedOutScenario, "timeout", 30);
-
-                    completedScenarios++;
-                    responseInProgress = false;
-                    nextScenario();
+                    handleTimeout();
                 }
             }, 1000);
         }
 
         async function submitResult(scenario, action, responseTime) {
             try {
-                const apiResponse = await fetch(`${API_BASE}/evaluate`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        trainee: username,
-                        scenario: scenario.id,
-                        decision: action,
-                        response_time: responseTime
-                    })
-                });
+                const apiResponse = await fetch(
+                    `${API_BASE}/evaluate`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            trainee: username,
+                            scenario: scenario.id,
+                            decision: action,
+                            response_time: responseTime
+                        })
+                    }
+                );
 
-                const data = await apiResponse.json();
+                let data = {};
 
-                if (!apiResponse.ok) {
-                    throw new Error(data.error || `Server error (${apiResponse.status})`);
+                try {
+                    data = await apiResponse.json();
+                } catch {
+                    data = {};
                 }
 
-                return data;
-            } catch (error) {
-                console.error("Could not save training result:", error);
+                if (!apiResponse.ok) {
+                    throw new Error(
+                        data.error ||
+                        `Server returned HTTP ${apiResponse.status}`
+                    );
+                }
+
                 return {
-                    result: action === scenario.correct ? "Correct" : "Needs Improvement",
-                    score: action === scenario.correct ? 10 : 0,
-                    feedback: "The local simulation continued, but this result could not be saved to the server. Check the Render backend."
+                    saved: true,
+                    feedback:
+                        typeof data.feedback === "string"
+                            ? data.feedback
+                            : "",
+                    result:
+                        typeof data.result === "string"
+                            ? data.result
+                            : ""
+                };
+            } catch (error) {
+                console.error("Training result could not be saved:", error);
+
+                return {
+                    saved: false,
+                    feedback: "",
+                    result: "",
+                    error: error.message
                 };
             }
         }
 
-        
-async function response(action) {
-    if (
-        !currentScenario ||
-        responseInProgress ||
-        completedScenarios >= scenarios.length
-    ) {
-        return;
-    }
+        async function response(action) {
+            if (
+                !currentScenario ||
+                responseInProgress ||
+                !scenarioActive ||
+                completedScenarios >= scenarios.length
+            ) {
+                return;
+            }
 
-    responseInProgress = true;
-    clearInterval(timerInterval);
+            responseInProgress = true;
+            scenarioActive = false;
+            clearInterval(timerInterval);
 
-    const answeredScenario = currentScenario;
+            const answeredScenario = currentScenario;
 
-    const responseTime = Math.min(
-        30,
-        Math.max(
-            0,
-            Math.round((Date.now() - scenarioStartTime) / 1000)
-        )
-    );
+            const responseTime = Math.min(
+                30,
+                Math.max(
+                    0,
+                    Math.round(
+                        (Date.now() - scenarioStartTime) / 1000
+                    )
+                )
+            );
 
-    totalResponseTime += responseTime;
+            totalResponseTime += responseTime;
 
-    let result = {};
+            // The scenario's expected action is the local reference
+            // for scoring. The backend stores the submitted decision.
+            const isCorrect = action === answeredScenario.correct;
 
-    try {
-        result = await submitResult(
-            answeredScenario,
-            action,
-            responseTime
-        );
+            if (isCorrect) {
+                score += 10;
+                correctAnswers++;
+            } else {
+                score = Math.max(0, score - 5);
+            }
 
-        if (!result || typeof result !== "object") {
-            result = {};
+            document.getElementById("score").textContent = score;
+
+            const serverResult = await submitResult(
+                answeredScenario,
+                action,
+                responseTime
+            );
+
+            let title;
+            let feedback;
+
+            if (isCorrect) {
+                title = "Correct response!";
+                feedback = answeredScenario.explanation;
+            } else {
+                title = "Needs Improvement";
+                feedback =
+                    "Your selected action was not the expected response. " +
+                    answeredScenario.explanation;
+            }
+
+            // Use backend feedback if it is a valid non-empty string.
+            if (
+                serverResult.saved &&
+                typeof serverResult.feedback === "string" &&
+                serverResult.feedback.trim() !== ""
+            ) {
+                feedback = serverResult.feedback;
+            }
+
+            showFeedback(
+                title,
+                feedback,
+                serverResult.saved,
+                responseTime
+            );
         }
-    } catch (error) {
-        console.error("Could not submit training result:", error);
-        result = {};
-    }
 
-    // Use the scenario's existing expected-action information
-    // if the backend response does not provide a result.
-    const expectedAction =
-        answeredScenario.correctAction ??
-        answeredScenario.correct ??
-        answeredScenario.answer;
+        async function handleTimeout() {
+            if (
+                !currentScenario ||
+                responseInProgress ||
+                !scenarioActive
+            ) {
+                return;
+            }
 
-    const isCorrect =
-        result.result === "Correct" ||
-        (
-            !result.result &&
-            typeof expectedAction === "string" &&
-            action.toLowerCase() === expectedAction.toLowerCase()
-        );
+            responseInProgress = true;
+            scenarioActive = false;
 
-    if (isCorrect) {
-        score += 10;
-        correctAnswers++;
-    } else {
-        score = Math.max(0, score - 5);
-    }
+            const timedOutScenario = currentScenario;
+            totalResponseTime += 30;
 
-    document.getElementById("score").textContent = score;
+            const serverResult = await submitResult(
+                timedOutScenario,
+                "timeout",
+                30
+            );
 
-    const title = isCorrect
-        ? "Correct response!"
-        : "Needs Improvement";
+            score = Math.max(0, score - 5);
 
-    const feedback =
-        result.feedback ||
-        result.message ||
-        answeredScenario.explanation ||
-        (
-            isCorrect
-                ? "Good decision for this simulated scenario."
-                : "Review the scenario and try to choose the expected response."
-        );
+            document.getElementById("score").textContent = score;
 
-    showFeedback(title, feedback);
+            const message =
+                "Time expired. " +
+                timedOutScenario.explanation +
+                " Try to make your decision within the allowed time.";
 
-    completedScenarios++;
-    responseInProgress = false;
+            showFeedback(
+                "Time's up!",
+                message,
+                serverResult.saved,
+                30
+            );
+        }
 
-    nextScenario();
-}
+        function showFeedback(title, message, saved, responseTime) {
+            const scenarioBox = document.getElementById("scenario");
 
-
-        function showFeedback(title, message) {
-            const oldFeedback = document.getElementById("responseFeedback");
-            if (oldFeedback) oldFeedback.remove();
+            scenarioBox.innerHTML = "";
 
             const feedbackBox = document.createElement("div");
             feedbackBox.id = "responseFeedback";
 
             const heading = document.createElement("h3");
-            heading.textContent = title;
+            heading.textContent = title || "Training Feedback";
 
             const paragraph = document.createElement("p");
-            paragraph.textContent = message || "Review the scenario and continue training.";
+            paragraph.textContent =
+                typeof message === "string" && message.trim()
+                    ? message
+                    : "Review the scenario and continue your training.";
+
+            const timeParagraph = document.createElement("p");
+            timeParagraph.textContent =
+                "Your response time: " + responseTime + " seconds.";
+
+            const saveStatus = document.createElement("p");
+            saveStatus.id = "saveStatus";
+            saveStatus.textContent = saved
+                ? "Training result saved to the server."
+                : "Result could not be saved to the server. Your local simulation can continue.";
+
+            const continueButton = document.createElement("button");
+            continueButton.id = "continueButton";
+            continueButton.textContent =
+                completedScenarios + 1 >= scenarios.length
+                    ? "View Final Results"
+                    : "Continue to Next Scenario";
+
+            continueButton.onclick = continueTraining;
 
             feedbackBox.appendChild(heading);
             feedbackBox.appendChild(paragraph);
+            feedbackBox.appendChild(timeParagraph);
+            feedbackBox.appendChild(saveStatus);
+            feedbackBox.appendChild(continueButton);
 
-            const scenarioBox = document.getElementById("scenario");
             scenarioBox.appendChild(feedbackBox);
         }
 
-        function nextScenario() {
+        function continueTraining() {
+            if (!responseInProgress) {
+                return;
+            }
+
+            completedScenarios++;
+            responseInProgress = false;
+            currentScenario = null;
+
             if (completedScenarios >= scenarios.length) {
                 finishTraining();
                 return;
             }
 
-            scenarioCount++;
             document.getElementById("scenarioNumber").textContent =
-                scenarioCount + " / " + scenarios.length;
+                (completedScenarios + 1) + " / " + scenarios.length;
+
+            document.getElementById("timer").textContent = "30";
 
             document.getElementById("scenario").innerHTML = `
                 <h2>Next Scenario</h2>
-                <p>Select another passenger to continue training.</p>
+                <p>Select a passenger to continue your training.</p>
             `;
         }
 
@@ -312,39 +457,60 @@ async function response(action) {
             const averageResponseTime = Math.round(
                 totalResponseTime / scenarios.length
             );
-            const percentage = Math.round((score / 50) * 100);
+
+            const percentage = Math.round(
+                (score / (scenarios.length * 10)) * 100
+            );
 
             let performance;
-            if (percentage >= 80) performance = "Excellent";
-            else if (percentage >= 60) performance = "Good";
-            else if (percentage >= 40) performance = "Needs Improvement";
-            else performance = "Requires Further Training";
 
-            document.getElementById("scenarioNumber").textContent = "Complete";
+            if (percentage >= 80) {
+                performance = "Excellent";
+            } else if (percentage >= 60) {
+                performance = "Good";
+            } else if (percentage >= 40) {
+                performance = "Needs Improvement";
+            } else {
+                performance = "Requires Further Training";
+            }
+
+            document.getElementById("scenarioNumber").textContent =
+                "Complete";
+
             document.getElementById("timer").textContent = "0";
 
             const trainingResult = {
-                username,
-                score,
+                username: username,
+                score: score,
                 completed: completedScenarios,
                 correct: correctAnswers,
                 averageTime: averageResponseTime,
-                performance,
-                feedback: "Continue practicing situational awareness, decision-making and response time."
+                performance: performance,
+                feedback:
+                    "Continue practicing situational awareness, " +
+                    "decision-making and response time."
             };
 
-            localStorage.setItem("trainingResult", JSON.stringify(trainingResult));
+            localStorage.setItem(
+                "trainingResult",
+                JSON.stringify(trainingResult)
+            );
 
             document.getElementById("scenario").innerHTML = `
                 <h2>Training Completed</h2>
                 <p><strong>Trainee:</strong> ${escapeHTML(username)}</p>
-                <p><strong>Scenarios Completed:</strong> ${completedScenarios} / ${scenarios.length}</p>
-                <p><strong>Final Score:</strong> ${score} / 50</p>
-                <p><strong>Correct Decisions:</strong> ${correctAnswers} / ${scenarios.length}</p>
-                <p><strong>Average Response Time:</strong> ${averageResponseTime} seconds</p>
-                <p><strong>Performance:</strong> ${performance}</p>
+                <p><strong>Scenarios Completed:</strong>
+                    ${completedScenarios} / ${scenarios.length}</p>
+                <p><strong>Final Score:</strong>
+                    ${score} / ${scenarios.length * 10}</p>
+                <p><strong>Correct Decisions:</strong>
+                    ${correctAnswers} / ${scenarios.length}</p>
+                <p><strong>Average Response Time:</strong>
+                    ${averageResponseTime} seconds</p>
+                <p><strong>Performance:</strong>
+                    ${escapeHTML(performance)}</p>
                 <h3>Training Feedback</h3>
-                <p>${trainingResult.feedback}</p>
+                <p>${escapeHTML(trainingResult.feedback)}</p>
                 <button onclick="window.location.href='dashboard.html'">
                     View Performance Dashboard
                 </button>
