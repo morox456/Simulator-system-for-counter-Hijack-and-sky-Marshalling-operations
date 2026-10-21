@@ -1,13 +1,20 @@
-from database import initialize_database
+
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from database import save_result, get_all_results
+from database import initialize_database, save_result, get_all_results
 
 app = Flask(__name__)
 CORS(app)
-initialize_database()
+
+# Initialize the database when the service starts.
+try:
+    initialize_database()
+    app.logger.info("Training database initialized.")
+except Exception:
+    app.logger.exception("Database initialization failed.")
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -21,7 +28,7 @@ def status():
     return jsonify({
         "project": "Virtual Simulator for Counter-Hijacking and Sky Marshalling Operations",
         "status": "Backend is working",
-        "version": "1.0"
+        "version": "1.1"
     })
 
 
@@ -29,7 +36,7 @@ def status():
 def evaluate():
     data = request.get_json(silent=True) or {}
 
-    trainee = data.get("trainee", "Guest")
+    trainee = str(data.get("trainee") or "Guest").strip()
     scenario = data.get("scenario")
     decision = data.get("decision")
     response_time = data.get("response_time", 0)
@@ -43,31 +50,55 @@ def evaluate():
         "1": "observe",
         "2": "report",
         "3": "observe",
-        "4": "report"
+        "4": "report",
+        "5": "report"
     }
 
-    scenario_key = str(scenario)
+    scenario_key = str(scenario).strip()
     decision = str(decision).strip().lower()
-    correct_action = correct_decisions.get(scenario_key)
 
-    if correct_action is None:
+    if scenario_key not in correct_decisions:
         return jsonify({"error": "Unknown scenario"}), 400
 
+    try:
+        response_time = float(response_time)
+        if not 0 <= response_time <= 30:
+            raise ValueError("Response time must be between 0 and 30 seconds.")
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid response_time"}), 400
+
+    correct_action = correct_decisions[scenario_key]
     is_correct = decision == correct_action
 
     result = "Correct" if is_correct else "Needs Improvement"
     score = 10 if is_correct else 0
 
-    feedback = (
-        "Good decision for this simulated scenario."
-        if is_correct
-        else "Review the scenario and try to choose the expected response."
-    )
+    feedback_messages = {
+        "1": "Observe and assess the unusual behavior before deciding on further action.",
+        "2": "Communicate the passenger's report to the crew for further assessment.",
+        "3": "Observe the situation carefully and avoid making assumptions based only on nervous behavior.",
+        "4": "Communicate with the crew to support coordinated assessment.",
+        "5": "Report unauthorized entry into a restricted area to the appropriate crew member."
+    }
+
+    if decision == "timeout":
+        result = "Needs Improvement"
+        score = 0
+        feedback = (
+            "Time expired. Review the scenario and try to make your "
+            "decision within the allowed time."
+        )
+    elif is_correct:
+        feedback = "Correct response. " + feedback_messages[scenario_key]
+    else:
+        feedback = (
+            "Review the scenario. " + feedback_messages[scenario_key]
+        )
 
     try:
         save_result(
             trainee,
-            scenario,
+            scenario_key,
             decision,
             result,
             score,
@@ -81,7 +112,7 @@ def evaluate():
 
     return jsonify({
         "trainee": trainee,
-        "scenario": scenario,
+        "scenario": scenario_key,
         "decision": decision,
         "response_time": response_time,
         "result": result,
