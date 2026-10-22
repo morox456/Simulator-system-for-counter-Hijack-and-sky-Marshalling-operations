@@ -22,6 +22,12 @@
         #responseFeedback h3{margin-top:0}#responseFeedback p{line-height:1.6}
         #feedbackTitle.correct{color:#58d68d}#feedbackTitle.incorrect{color:#ff8585}
         #saveStatus,.muted{font-size:13px;color:#c3d1df}
+        .results-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0;text-align:left}
+        .result-item{padding:12px;border-radius:8px;background:#1d2a38;overflow-wrap:anywhere}
+        .result-item strong{display:block;font-size:12px;color:#c3d1df;margin-bottom:5px}
+        .result-item span{font-size:18px;font-weight:bold;color:#fff}
+        .result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:18px}
+        @media(max-width:480px){.results-grid{grid-template-columns:1fr}}
         .difficulty-panel{max-width:700px;margin:15px auto;padding:16px 20px;border:1px solid #34495e;border-radius:10px;background:#172333;color:#fff}
         .difficulty-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
         .difficulty-pill{display:inline-block;padding:6px 12px;border-radius:20px;background:#245b83;font-weight:bold}
@@ -138,10 +144,12 @@ function applyDifficulty(level,message) {
     const cleanMessage = String(message || "").trim();
     const settingsText = "Session settings: " + sessionScenarioCount +
         " scenarios, " + sessionTimeLimit + " seconds per decision.";
-    $("difficultyMessage").textContent =
-        (cleanMessage && !/^\d+\s+(easy|medium|hard)\s+session settings/i.test(cleanMessage)
-            ? cleanMessage + " "
-            : "Recommended level: " + level + ". ") + settingsText;
+    // Avoid repeating malformed backend phrases such as "3 Hard Session settings".
+    const looksLikeSettings = /session settings|seconds per decision/i.test(cleanMessage);
+    const readableMessage = (!cleanMessage || looksLikeSettings)
+        ? "Recommended level: " + level + "."
+        : cleanMessage;
+    $("difficultyMessage").textContent = readableMessage + " " + settingsText;
     $("timer").textContent=sessionTimeLimit;
 }
 
