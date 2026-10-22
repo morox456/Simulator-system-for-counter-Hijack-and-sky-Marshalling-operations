@@ -135,9 +135,13 @@ function applyDifficulty(level,message) {
     }
 
     $("difficultyBadge").textContent=level+" difficulty";
-    $("difficultyMessage").textContent=message+
-        " Session settings: "+sessionScenarioCount+
-        " scenarios, "+sessionTimeLimit+" seconds per decision.";
+    const cleanMessage = String(message || "").trim();
+    const settingsText = "Session settings: " + sessionScenarioCount +
+        " scenarios, " + sessionTimeLimit + " seconds per decision.";
+    $("difficultyMessage").textContent =
+        (cleanMessage && !/^\d+\s+(easy|medium|hard)\s+session settings/i.test(cleanMessage)
+            ? cleanMessage + " "
+            : "Recommended level: " + level + ". ") + settingsText;
     $("timer").textContent=sessionTimeLimit;
 }
 
@@ -424,15 +428,23 @@ function finishTraining() {
 
     addText(box,"h2","Training Completed");
     addText(box,"p","Trainee: "+username);
-    addText(box,"p","Difficulty: "+difficulty);
-    addText(box,"p","Scenarios Completed: "+completedScenarios+" / "+sessionScenarios.length);
-    addText(box,"p","Final Score: "+score+" points");
-    addText(box,"p","Correct Decisions: "+correctAnswers+" / "+sessionScenarios.length);
-    addText(box,"p","Session Accuracy: "+percentage+"%");
-    addText(box,"p","Average Response Time: "+avg+" seconds");
-    addText(box,"p","Performance: "+performance);
+
+    const grid=document.createElement("div");
+    grid.className="results-grid";
+    addResultItem(grid,"Difficulty",difficulty);
+    addResultItem(grid,"Final Score",score+" points");
+    addResultItem(grid,"Scenarios Completed",completedScenarios+" / "+sessionScenarios.length);
+    addResultItem(grid,"Correct Decisions",correctAnswers+" / "+sessionScenarios.length);
+    addResultItem(grid,"Session Accuracy",percentage+"%");
+    addResultItem(grid,"Average Response Time",avg+" seconds");
+    addResultItem(grid,"Performance",performance);
+    box.appendChild(grid);
+
     addText(box,"h3","Training Feedback");
     addText(box,"p",result.feedback);
+
+    const actions=document.createElement("div");
+    actions.className="result-actions";
 
     const dashboard=document.createElement("button");
     dashboard.textContent="View Performance Dashboard";
@@ -447,17 +459,33 @@ function finishTraining() {
     };
 
     const refresh=document.createElement("button");
-    refresh.textContent="Update AI Recommendation";
+    refresh.textContent="Update Recommendation";
     refresh.onclick=async()=>{
         difficultyLoaded=false;
         await refreshDifficulty();
-        addText(box,"p","Next session recommendation: "+difficulty+" difficulty. Settings: "+sessionScenarioCount+" scenarios, "+sessionTimeLimit+" seconds per decision.");
+        const note=document.createElement("p");
+        note.textContent="Next session: "+difficulty+" difficulty — "+sessionScenarioCount+
+            " scenarios, "+sessionTimeLimit+" seconds per decision.";
+        box.appendChild(note);
     };
 
-    box.append(dashboard,retry,refresh);
+    actions.append(dashboard,retry,refresh);
+    box.appendChild(actions);
 
     difficultyLoaded=false;
     refreshDifficulty();
+}
+
+
+function addResultItem(container,label,value) {
+    const item=document.createElement("div");
+    item.className="result-item";
+    const strong=document.createElement("strong");
+    strong.textContent=label;
+    const span=document.createElement("span");
+    span.textContent=value;
+    item.append(strong,span);
+    container.appendChild(item);
 }
 
 function addText(container,tag,value) {
