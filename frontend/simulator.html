@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sky Marshal Simulator</title>
     <link rel="stylesheet" href="style.css">
+
     <style>
         .simulator-container{max-width:1000px;margin:30px auto;padding:20px}
         .stats{display:flex;justify-content:center;flex-wrap:wrap;gap:16px;margin:20px 0}
@@ -12,29 +14,35 @@
         .stats strong,.stats span{display:block;margin:5px}
         .aircraft{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 15px;max-width:560px;margin:25px auto;padding:35px;background:#d7dce2;border-radius:90px;color:#fff}
         .passenger,.crew,.marshal{display:flex;justify-content:center;align-items:center;min-height:55px;border-radius:8px;font-weight:bold;border:0}
-        .passenger{background:#1264a3;color:#fff;cursor:pointer}.passenger:hover{background:#0c4c7e}
-        .crew{background:#23733a}.marshal{grid-column:span 2;background:#a72c2c}
+        .passenger{background:#1264a3;color:#fff;cursor:pointer}
+        .passenger:hover{background:#0c4c7e}
+        .crew{background:#23733a}
+        .marshal{grid-column:span 2;background:#a72c2c}
         #scenario{max-width:700px;margin:25px auto;padding:25px;text-align:center;border-radius:10px;background:#111c29;color:#fff}
         #scenario button,.action-button{margin:7px;padding:12px 18px;border:0;border-radius:6px;background:#1676bd;color:#fff;font-weight:bold;cursor:pointer}
         #scenario button:hover,.action-button:hover{background:#0d568d}
         #scenario button:disabled,.action-button:disabled{opacity:.5;cursor:not-allowed}
         #responseFeedback{padding:20px;margin-top:15px;text-align:left;background:#1d2a38;border-left:5px solid #2196f3;border-radius:8px;overflow-wrap:anywhere}
-        #responseFeedback h3{margin-top:0}#responseFeedback p{line-height:1.6}
-        #feedbackTitle.correct{color:#58d68d}#feedbackTitle.incorrect{color:#ff8585}
+        #responseFeedback h3{margin-top:0}
+        #responseFeedback p{line-height:1.6}
+        #feedbackTitle.correct{color:#58d68d}
+        #feedbackTitle.incorrect{color:#ff8585}
         #saveStatus,.muted{font-size:13px;color:#c3d1df}
         .results-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0;text-align:left}
         .result-item{padding:12px;border-radius:8px;background:#1d2a38;overflow-wrap:anywhere}
         .result-item strong{display:block;font-size:12px;color:#c3d1df;margin-bottom:5px}
         .result-item span{font-size:18px;font-weight:bold;color:#fff}
         .result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:18px}
-        @media(max-width:480px){.results-grid{grid-template-columns:1fr}}
         .difficulty-panel{max-width:700px;margin:15px auto;padding:16px 20px;border:1px solid #34495e;border-radius:10px;background:#172333;color:#fff}
         .difficulty-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
         .difficulty-pill{display:inline-block;padding:6px 12px;border-radius:20px;background:#245b83;font-weight:bold}
         .difficulty-note{margin:10px 0 0;line-height:1.5;color:#d3dfeb}
+        .adaptive-note{max-width:700px;margin:12px auto;padding:12px 16px;background:#172333;border:1px solid #34495e;border-radius:8px;color:#d3dfeb;line-height:1.5}
+        @media(max-width:480px){.results-grid{grid-template-columns:1fr}}
         @media(max-width:600px){.simulator-container{padding:10px}.aircraft{gap:10px;padding:20px;border-radius:45px}.passenger,.crew,.marshal{min-height:45px;font-size:12px}#scenario{padding:15px}.stats{gap:8px}.stats>div{min-width:75px;padding:10px}}
     </style>
 </head>
+
 <body>
 <main class="simulator-container">
     <h1>Virtual Aircraft Simulator</h1>
@@ -42,12 +50,19 @@
 
     <section class="difficulty-panel" aria-live="polite">
         <div class="difficulty-row">
-            <div><strong>AI Adaptive Training</strong><div class="muted">Difficulty is recommended using recent saved training results.</div></div>
+            <div>
+                <strong>AI Adaptive Training</strong>
+                <div class="muted">Difficulty and scenario selection use saved training results.</div>
+            </div>
             <span id="difficultyBadge" class="difficulty-pill">Loading recommendation...</span>
         </div>
         <p id="difficultyMessage" class="difficulty-note">Loading your recommended training level from the server.</p>
         <button id="refreshDifficulty" class="action-button" type="button">Refresh Recommendation</button>
     </section>
+
+    <div id="adaptiveNotice" class="adaptive-note" aria-live="polite">
+        Your training priorities will be calculated from your saved performance.
+    </div>
 
     <div class="stats">
         <div><strong>Score</strong><span id="score">0</span></div>
@@ -79,428 +94,792 @@
 const API_BASE = "https://sky-marshal-backend.onrender.com/api";
 const $ = id => document.getElementById(id);
 const username = (localStorage.getItem("username") || "Guest").trim() || "Guest";
+
 $("welcome").textContent = "Welcome, " + username;
 
+/*
+ * Each scenario has a topic so the adaptive selector can prioritize
+ * training areas where the trainee's recorded accuracy is low.
+ */
 const scenarios = [
-    {id:"1",description:"A passenger repeatedly looks around the cabin and behaves unusually.",correct:"observe",explanation:"Observe and assess the situation carefully. Unusual behavior alone does not prove wrongdoing."},
-    {id:"2",description:"A passenger reports unusual behavior by another passenger.",correct:"report",explanation:"Communicate the report to the cabin crew so it can be assessed appropriately."},
-    {id:"3",description:"A passenger appears nervous and repeatedly checks their surroundings.",correct:"observe",explanation:"Observe the situation without making assumptions based only on nervous behavior."},
-    {id:"4",description:"A cabin crew member informs you about a concerning passenger situation.",correct:"report",explanation:"Communicate and coordinate with the cabin crew."},
-    {id:"5",description:"A passenger attempts to enter a restricted aircraft area without authorization.",correct:"report",explanation:"Report unauthorized access to the appropriate crew member."}
+    {
+        id: "1",
+        topic: "situational awareness",
+        description: "A passenger repeatedly looks around the cabin and behaves unusually.",
+        correct: "observe",
+        explanation: "Observe and assess the situation carefully. Unusual behavior alone does not prove wrongdoing."
+    },
+    {
+        id: "2",
+        topic: "communication",
+        description: "A passenger reports unusual behavior by another passenger.",
+        correct: "report",
+        explanation: "Communicate the report to the cabin crew so it can be assessed appropriately."
+    },
+    {
+        id: "3",
+        topic: "situational awareness",
+        description: "A passenger appears nervous and repeatedly checks their surroundings.",
+        correct: "observe",
+        explanation: "Observe the situation without making assumptions based only on nervous behavior."
+    },
+    {
+        id: "4",
+        topic: "crew coordination",
+        description: "A cabin crew member informs you about a concerning passenger situation.",
+        correct: "report",
+        explanation: "Communicate and coordinate with the cabin crew."
+    },
+    {
+        id: "5",
+        topic: "restricted-area awareness",
+        description: "A passenger attempts to enter a restricted aircraft area without authorization.",
+        correct: "report",
+        explanation: "Report unauthorized access to the appropriate crew member."
+    }
 ];
 
-let score=0,timeLeft=30,timerInterval=null,currentScenario=null;
-let sessionScenarios=[],completedScenarios=0,correctAnswers=0,totalResponseTime=0;
-let scenarioStartTime=0,responseInProgress=false,scenarioActive=false;
-let difficulty="Medium",sessionTimeLimit=30,sessionScenarioCount=5;
-let difficultyLoaded=false,difficultyRequest=null;
+let score = 0;
+let timeLeft = 30;
+let timerInterval = null;
+let currentScenario = null;
+let sessionScenarios = [];
+let completedScenarios = 0;
+let correctAnswers = 0;
+let totalResponseTime = 0;
+let scenarioStartTime = 0;
+let responseInProgress = false;
+let scenarioActive = false;
+let difficulty = "Medium";
+let sessionTimeLimit = 30;
+let sessionScenarioCount = 5;
+let difficultyLoaded = false;
+let difficultyRequest = null;
+let weakTopicNames = [];
+
+/* ---------------- DIFFICULTY RECOMMENDATION ---------------- */
 
 function normalizeDifficulty(payload) {
     const rec = payload && payload.recommendation;
     let text = "";
 
-    if (typeof rec === "string") text = rec;
-    else if (rec && typeof rec === "object") {
+    if (typeof rec === "string") {
+        text = rec;
+    } else if (rec && typeof rec === "object") {
         text = [
-            rec.difficulty, rec.level, rec.recommended_difficulty,
-            rec.recommendation, rec.message
+            rec.difficulty,
+            rec.level,
+            rec.recommended_difficulty,
+            rec.recommendation,
+            rec.message,
+            rec.reason
         ].filter(Boolean).join(" ");
     }
 
     if (!text && payload) {
-        text = [payload.difficulty,payload.level,payload.message]
-            .filter(Boolean).join(" ");
+        text = [
+            payload.difficulty,
+            payload.level,
+            payload.message,
+            payload.reason
+        ].filter(Boolean).join(" ");
     }
 
     const lower = String(text).toLowerCase();
 
-    if (lower.includes("hard") || lower.includes("advanced"))
-        return {level:"Hard",message:text || "Your recent results suggest a more challenging session."};
-
-    if (lower.includes("easy") || lower.includes("beginner"))
-        return {level:"Easy",message:text || "A foundational session is recommended."};
-
-    if (lower.includes("medium") || lower.includes("moderate"))
-        return {level:"Medium",message:text || "A balanced session is recommended."};
-
-    return {level:"Medium",message:text || "A balanced session is recommended while the system gathers more results."};
-}
-
-function applyDifficulty(level,message) {
-    difficulty=level;
-
-    if(level==="Easy") {
-        sessionTimeLimit=40;
-        sessionScenarioCount=4;
-    } else if(level==="Hard") {
-        sessionTimeLimit=25;
-        sessionScenarioCount=5;
-    } else {
-        sessionTimeLimit=30;
-        sessionScenarioCount=5;
+    if (lower.includes("hard") || lower.includes("advanced")) {
+        return {
+            level: "Hard",
+            message: "Your recent saved results suggest a more challenging session."
+        };
     }
 
-    $("difficultyBadge").textContent=level+" difficulty";
-    const cleanMessage = String(message || "").trim();
-    const settingsText = "Session settings: " + sessionScenarioCount +
-        " scenarios, " + sessionTimeLimit + " seconds per decision.";
-    // Avoid repeating malformed backend phrases such as "3 Hard Session settings".
-    const looksLikeSettings = /session settings|seconds per decision/i.test(cleanMessage);
-    const readableMessage = (!cleanMessage || looksLikeSettings)
-        ? "Recommended level: " + level + "."
-        : cleanMessage;
-    $("difficultyMessage").textContent = readableMessage + " " + settingsText;
-    $("timer").textContent=sessionTimeLimit;
+    if (lower.includes("easy") || lower.includes("beginner")) {
+        return {
+            level: "Easy",
+            message: "A foundational session is recommended to build consistency."
+        };
+    }
+
+    if (lower.includes("medium") || lower.includes("moderate")) {
+        return {
+            level: "Medium",
+            message: "A balanced session is recommended."
+        };
+    }
+
+    return {
+        level: "Medium",
+        message: "A balanced session is recommended while more results are collected."
+    };
+}
+
+function applyDifficulty(level, message) {
+    difficulty = level;
+
+    if (level === "Easy") {
+        sessionTimeLimit = 40;
+        sessionScenarioCount = 4;
+    } else if (level === "Hard") {
+        sessionTimeLimit = 25;
+        sessionScenarioCount = 5;
+    } else {
+        sessionTimeLimit = 30;
+        sessionScenarioCount = 5;
+    }
+
+    $("difficultyBadge").textContent = level + " difficulty";
+
+    $("difficultyMessage").textContent =
+        message + " Session settings: " +
+        sessionScenarioCount + " scenarios, " +
+        sessionTimeLimit + " seconds per decision.";
+
+    $("timer").textContent = sessionTimeLimit;
 }
 
 async function refreshDifficulty() {
     if (difficultyRequest) return difficultyRequest;
 
-    $("difficultyBadge").textContent="Checking...";
-    $("difficultyMessage").textContent="Requesting the latest recommendation from the training backend.";
-    $("refreshDifficulty").disabled=true;
+    $("difficultyBadge").textContent = "Checking...";
+    $("difficultyMessage").textContent =
+        "Requesting your latest recommendation from the training backend.";
+    $("refreshDifficulty").disabled = true;
 
-    difficultyRequest=(async()=>{
+    difficultyRequest = (async () => {
         try {
-            const response=await fetch(
-                API_BASE+"/recommend-difficulty?trainee="+encodeURIComponent(username),
-                {cache:"no-store"}
+            const response = await fetch(
+                API_BASE + "/recommend-difficulty?trainee=" +
+                encodeURIComponent(username),
+                { cache: "no-store" }
             );
-            const data=await response.json().catch(()=>({}));
 
-            if(!response.ok) throw new Error(data.error || "Recommendation request failed");
+            const data = await response.json().catch(() => ({}));
 
-            const result=normalizeDifficulty(data);
-            applyDifficulty(result.level,result.message);
-            difficultyLoaded=true;
-        } catch(error) {
-            console.warn("Adaptive recommendation unavailable:",error);
-            applyDifficulty("Medium","The recommendation service is temporarily unavailable. A balanced default session will be used.");
-            difficultyLoaded=true;
+            if (!response.ok) {
+                throw new Error(data.error || "Recommendation request failed");
+            }
+
+            const result = normalizeDifficulty(data);
+            applyDifficulty(result.level, result.message);
+            difficultyLoaded = true;
+
+        } catch (error) {
+            console.warn("Adaptive recommendation unavailable:", error);
+
+            applyDifficulty(
+                "Medium",
+                "The recommendation service is unavailable. A balanced default session will be used."
+            );
+
+            difficultyLoaded = true;
+
         } finally {
-            difficultyRequest=null;
-            $("refreshDifficulty").disabled=false;
+            difficultyRequest = null;
+            $("refreshDifficulty").disabled = false;
         }
     })();
 
     return difficultyRequest;
 }
 
-$("refreshDifficulty").addEventListener("click",async()=>{
-    if(scenarioActive || responseInProgress) {
-        $("difficultyMessage").textContent="Finish the current scenario before refreshing the recommendation for your next session.";
+/* ---------------- PERSONALIZED TOPIC ANALYSIS ---------------- */
+
+function normalizeTopicName(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
+}
+
+function getTopicAnalysisEntries(analysis) {
+    const topicAnalysis = analysis && analysis.topic_analysis;
+
+    if (Array.isArray(topicAnalysis)) {
+        return topicAnalysis.map(item => ({
+            name: item.topic || item.name || item.category || "",
+            accuracy: Number(item.accuracy ?? item.accuracy_percentage),
+            attempts: Number(item.attempts ?? item.total ?? item.count ?? 0)
+        })).filter(item => item.name && Number.isFinite(item.accuracy));
+    }
+
+    if (topicAnalysis && typeof topicAnalysis === "object") {
+        return Object.entries(topicAnalysis).map(([name, item]) => {
+            if (typeof item === "number") {
+                return { name, accuracy: item, attempts: 0 };
+            }
+
+            return {
+                name,
+                accuracy: Number(item.accuracy ?? item.accuracy_percentage),
+                attempts: Number(item.attempts ?? item.total ?? item.count ?? 0)
+            };
+        }).filter(item => item.name && Number.isFinite(item.accuracy));
+    }
+
+    return [];
+}
+
+async function loadWeakTopics() {
+    weakTopicNames = [];
+
+    try {
+        const response = await fetch(
+            API_BASE + "/analysis?trainee=" + encodeURIComponent(username),
+            { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+            throw new Error("Topic analysis request failed");
+        }
+
+        const data = await response.json();
+        const analysis = data.analysis || data;
+        const entries = getTopicAnalysisEntries(analysis);
+
+        /*
+         * Only use topics that have actual saved attempts.
+         * Topics with accuracy below 80% receive higher priority.
+         */
+        weakTopicNames = entries
+            .filter(item =>
+                item.attempts > 0 &&
+                item.accuracy < 80
+            )
+            .sort((a, b) => a.accuracy - b.accuracy)
+            .map(item => normalizeTopicName(item.name));
+
+        return entries;
+
+    } catch (error) {
+        console.warn("Could not load topic analysis:", error);
+        return [];
+    }
+}
+
+function topicPriority(scenario) {
+    if (!weakTopicNames.length) return 999;
+
+    const scenarioTopic = normalizeTopicName(scenario.topic);
+
+    const exactMatch = weakTopicNames.indexOf(scenarioTopic);
+
+    if (exactMatch !== -1) {
+        return exactMatch;
+    }
+
+    /*
+     * Also allow partial matching if backend labels differ slightly,
+     * such as "crew coordination" and "coordination".
+     */
+    const partialMatch = weakTopicNames.findIndex(topic =>
+        topic.includes(scenarioTopic) ||
+        scenarioTopic.includes(topic)
+    );
+
+    return partialMatch === -1 ? 999 : partialMatch;
+}
+
+function shuffleArray(items) {
+    const result = [...items];
+
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+}
+
+/*
+ * Adaptive selection:
+ * 1. Read saved topic accuracy for this trainee.
+ * 2. Put matching weak topics first.
+ * 3. Randomize scenarios within the same priority.
+ * 4. Keep all remaining scenarios available.
+ */
+async function createSessionScenarios() {
+    $("adaptiveNotice").textContent =
+        "Checking your saved performance to personalize this session...";
+
+    await loadWeakTopics();
+
+    const ordered = scenarios
+        .map(scenario => ({
+            ...scenario,
+            priority: topicPriority(scenario)
+        }))
+        .sort((a, b) => a.priority - b.priority);
+
+    const groups = [];
+    let index = 0;
+
+    while (index < ordered.length) {
+        const priority = ordered[index].priority;
+        const group = [];
+
+        while (
+            index < ordered.length &&
+            ordered[index].priority === priority
+        ) {
+            group.push(ordered[index]);
+            index++;
+        }
+
+        groups.push(...shuffleArray(group));
+    }
+
+    sessionScenarios = groups.slice(0, sessionScenarioCount);
+
+    if (weakTopicNames.length > 0) {
+        const matchingTopics = sessionScenarios
+            .filter(scenario => scenario.priority < 999)
+            .map(scenario => scenario.topic);
+
+        if (matchingTopics.length > 0) {
+            $("adaptiveNotice").textContent =
+                "Personalized session: prioritizing topics with lower recorded accuracy — " +
+                [...new Set(matchingTopics)].join(", ") + ".";
+        } else {
+            $("adaptiveNotice").textContent =
+                "Your saved weak topics do not match the available scenarios exactly. " +
+                "A balanced scenario selection will be used.";
+        }
+    } else {
+        $("adaptiveNotice").textContent =
+            "No topic below 80% accuracy was found in the available analysis. " +
+            "Scenarios will be selected in a balanced randomized order.";
+    }
+}
+
+/* ---------------- USER CONTROLS ---------------- */
+
+$("refreshDifficulty").addEventListener("click", async () => {
+    if (scenarioActive || responseInProgress) {
+        $("difficultyMessage").textContent =
+            "Finish the current scenario before refreshing the recommendation.";
         return;
     }
-    difficultyLoaded=false;
+
+    difficultyLoaded = false;
     await refreshDifficulty();
 });
 
-$("startTraining").addEventListener("click",startTraining);
-
-function createSessionScenarios() {
-    sessionScenarios=[...scenarios];
-
-    for(let i=sessionScenarios.length-1;i>0;i--) {
-        const j=Math.floor(Math.random()*(i+1));
-        [sessionScenarios[i],sessionScenarios[j]]=[sessionScenarios[j],sessionScenarios[i]];
-    }
-
-    sessionScenarios=sessionScenarios.slice(0,sessionScenarioCount);
-}
+$("startTraining").addEventListener("click", startTraining);
 
 async function startTraining() {
-    if(scenarioActive || responseInProgress) return;
+    if (scenarioActive || responseInProgress) return;
 
-    if(!difficultyLoaded) {
-        $("startTraining").disabled=true;
-        $("startTraining").textContent="Loading recommendation...";
+    if (!difficultyLoaded) {
+        $("startTraining").disabled = true;
+        $("startTraining").textContent = "Loading recommendation...";
+
         await refreshDifficulty();
-        $("startTraining").disabled=false;
-        $("startTraining").textContent="Start Training";
+
+        $("startTraining").disabled = false;
+        $("startTraining").textContent = "Start Training";
     }
 
-    score=0;
-    completedScenarios=0;
-    correctAnswers=0;
-    totalResponseTime=0;
-    currentScenario=null;
+    score = 0;
+    completedScenarios = 0;
+    correctAnswers = 0;
+    totalResponseTime = 0;
+    currentScenario = null;
 
-    $("score").textContent="0";
-    createSessionScenarios();
-    $("scenarioNumber").textContent="1 / "+sessionScenarios.length;
+    $("score").textContent = "0";
+    $("scenarioNumber").textContent = "Preparing...";
+    $("startTraining").disabled = true;
+
+    try {
+        await createSessionScenarios();
+    } finally {
+        $("startTraining").disabled = false;
+    }
+
+    $("scenarioNumber").textContent = "1 / " + sessionScenarios.length;
     beginPrompt();
 }
 
 function selectPassenger(number) {
-    if(completedScenarios>=sessionScenarios.length || responseInProgress || scenarioActive) return;
+    if (
+        completedScenarios >= sessionScenarios.length ||
+        responseInProgress ||
+        scenarioActive
+    ) {
+        return;
+    }
 
     clearInterval(timerInterval);
-    currentScenario=sessionScenarios[completedScenarios];
-    timeLeft=sessionTimeLimit;
-    scenarioActive=true;
-    scenarioStartTime=Date.now();
 
-    $("timer").textContent=timeLeft;
-    $("scenarioNumber").textContent=(completedScenarios+1)+" / "+sessionScenarios.length;
+    currentScenario = sessionScenarios[completedScenarios];
+    timeLeft = sessionTimeLimit;
+    scenarioActive = true;
+    scenarioStartTime = Date.now();
 
-    const box=$("scenario");
+    $("timer").textContent = timeLeft;
+    $("scenarioNumber").textContent =
+        (completedScenarios + 1) + " / " + sessionScenarios.length;
+
+    const box = $("scenario");
     box.replaceChildren();
 
-    addText(box,"h2","Passenger "+number+" · "+difficulty+" difficulty");
-    addText(box,"p",currentScenario.description);
-    addText(box,"h3","What would you do?");
-    addDecisionButton(box,"Observe","observe");
-    addDecisionButton(box,"Report to Crew","report");
-    addDecisionButton(box,"Ignore","ignore");
+    addText(box, "h2", "Passenger " + number + " · " + difficulty + " difficulty");
+    addText(box, "p", "Training topic: " + currentScenario.topic);
+    addText(box, "p", currentScenario.description);
+    addText(box, "h3", "What would you do?");
+
+    addDecisionButton(box, "Observe", "observe");
+    addDecisionButton(box, "Report to Crew", "report");
+    addDecisionButton(box, "Ignore", "ignore");
+
     startTimer();
 }
 
 function beginPrompt() {
-    const box=$("scenario");
+    const box = $("scenario");
     box.replaceChildren();
 
-    addText(box,"h2",completedScenarios===0?"Ready to Begin?":"Next Scenario");
-    addText(box,"p","Select a passenger to receive a training scenario. This session uses "+difficulty.toLowerCase()+" adaptive difficulty.");
+    addText(
+        box,
+        "h2",
+        completedScenarios === 0 ? "Ready to Begin?" : "Next Scenario"
+    );
 
-    const button=document.createElement("button");
-    button.type="button";
-    button.textContent="Select Passenger";
-    button.onclick=()=>selectPassenger(Math.floor(Math.random()*6)+1);
+    addText(
+        box,
+        "p",
+        "Select a passenger to receive a training scenario. This session uses " +
+        difficulty.toLowerCase() + " adaptive difficulty."
+    );
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Select Passenger";
+    button.onclick = () => selectPassenger(Math.floor(Math.random() * 6) + 1);
+
     box.appendChild(button);
 }
 
-function addDecisionButton(container,label,action) {
-    const button=document.createElement("button");
-    button.textContent=label;
-    button.type="button";
-    button.onclick=()=>response(action);
+function addDecisionButton(container, label, action) {
+    const button = document.createElement("button");
+    button.textContent = label;
+    button.type = "button";
+    button.onclick = () => response(action);
     container.appendChild(button);
 }
 
+/* ---------------- TIMER ---------------- */
+
 function startTimer() {
     clearInterval(timerInterval);
-    timerInterval=setInterval(()=>{
-        if(!scenarioActive || responseInProgress) return;
-        timeLeft=Math.max(0,timeLeft-1);
-        $("timer").textContent=timeLeft;
-        if(timeLeft===0) {
+
+    timerInterval = setInterval(() => {
+        if (!scenarioActive || responseInProgress) return;
+
+        timeLeft = Math.max(0, timeLeft - 1);
+        $("timer").textContent = timeLeft;
+
+        if (timeLeft === 0) {
             clearInterval(timerInterval);
             handleTimeout();
         }
-    },1000);
+    }, 1000);
 }
 
-async function submitResult(scenario,action,responseTime) {
+/* ---------------- BACKEND RESULT SAVING ---------------- */
+
+async function submitResult(scenario, action, responseTime) {
     try {
-        const res=await fetch(API_BASE+"/evaluate",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-                trainee:username,
-                scenario:scenario.id,
-                decision:action,
-                response_time:responseTime
+        const res = await fetch(API_BASE + "/evaluate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                trainee: username,
+                scenario: scenario.id,
+                decision: action,
+                response_time: responseTime
             })
         });
 
-        const data=await res.json().catch(()=>({}));
-        if(!res.ok) throw new Error(data.error || "Server returned HTTP "+res.status);
-        return {saved:true,data};
-    } catch(error) {
-        console.error("Training result could not be saved:",error);
-        return {saved:false,error:error.message};
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(data.error || "Server returned HTTP " + res.status);
+        }
+
+        return { saved: true, data };
+
+    } catch (error) {
+        console.error("Training result could not be saved:", error);
+        return { saved: false, error: error.message };
     }
 }
 
+/* ---------------- DECISION EVALUATION ---------------- */
+
 async function response(action) {
-    if(!currentScenario || responseInProgress || !scenarioActive || completedScenarios>=sessionScenarios.length) return;
-
-    responseInProgress=true;
-    scenarioActive=false;
-    clearInterval(timerInterval);
-
-    const answered=currentScenario;
-    const responseTime=Math.min(sessionTimeLimit,Math.max(0,Math.round((Date.now()-scenarioStartTime)/1000)));
-    totalResponseTime+=responseTime;
-
-    const correct=action===answered.correct;
-    if(correct) {
-        score+=10;
-        correctAnswers++;
-    } else {
-        score=Math.max(0,score-5);
+    if (
+        !currentScenario ||
+        responseInProgress ||
+        !scenarioActive ||
+        completedScenarios >= sessionScenarios.length
+    ) {
+        return;
     }
 
-    $("score").textContent=score;
+    responseInProgress = true;
+    scenarioActive = false;
+    clearInterval(timerInterval);
 
-    const saved=await submitResult(answered,action,responseTime);
-    const feedback=correct
+    const answered = currentScenario;
+
+    const responseTime = Math.min(
+        sessionTimeLimit,
+        Math.max(0, Math.round((Date.now() - scenarioStartTime) / 1000))
+    );
+
+    totalResponseTime += responseTime;
+
+    const correct = action === answered.correct;
+
+    if (correct) {
+        score += 10;
+        correctAnswers++;
+    } else {
+        score = Math.max(0, score - 5);
+    }
+
+    $("score").textContent = score;
+
+    const saved = await submitResult(answered, action, responseTime);
+
+    const feedback = correct
         ? answered.explanation
-        : "Your selected action was not the expected response. "+answered.explanation;
+        : "Your selected action was not the expected response. " + answered.explanation;
 
-    showFeedback(correct?"Correct response!":"Needs Improvement",feedback,saved.saved,responseTime);
+    showFeedback(
+        correct ? "Correct response!" : "Needs Improvement",
+        feedback,
+        saved.saved,
+        responseTime
+    );
 }
 
 async function handleTimeout() {
-    if(!currentScenario || responseInProgress || !scenarioActive) return;
+    if (!currentScenario || responseInProgress || !scenarioActive) return;
 
-    responseInProgress=true;
-    scenarioActive=false;
+    responseInProgress = true;
+    scenarioActive = false;
 
-    const timedOut=currentScenario;
-    totalResponseTime+=sessionTimeLimit;
-    score=Math.max(0,score-5);
-    $("score").textContent=score;
+    const timedOut = currentScenario;
 
-    const saved=await submitResult(timedOut,"timeout",sessionTimeLimit);
-    showFeedback("Time's up!","Time expired. "+timedOut.explanation+" Try to make your decision within the allowed time.",saved.saved,sessionTimeLimit);
+    totalResponseTime += sessionTimeLimit;
+    score = Math.max(0, score - 5);
+
+    $("score").textContent = score;
+
+    const saved = await submitResult(
+        timedOut,
+        "timeout",
+        sessionTimeLimit
+    );
+
+    showFeedback(
+        "Time's up!",
+        "Time expired. " + timedOut.explanation +
+        " Try to make your decision within the allowed time.",
+        saved.saved,
+        sessionTimeLimit
+    );
 }
 
-function showFeedback(title,message,saved,responseTime) {
-    const box=$("scenario");
+function showFeedback(title, message, saved, responseTime) {
+    const box = $("scenario");
     box.replaceChildren();
 
-    const feedback=document.createElement("div");
-    feedback.id="responseFeedback";
+    const feedback = document.createElement("div");
+    feedback.id = "responseFeedback";
 
-    const h=document.createElement("h3");
-    h.id="feedbackTitle";
-    h.textContent=title;
-    h.className=title==="Correct response!"?"correct":"incorrect";
+    const h = document.createElement("h3");
+    h.id = "feedbackTitle";
+    h.textContent = title;
+    h.className = title === "Correct response!" ? "correct" : "incorrect";
 
-    const p=document.createElement("p");
-    p.textContent=message;
+    const p = document.createElement("p");
+    p.textContent = message;
 
-    const time=document.createElement("p");
-    time.textContent="Your response time: "+responseTime+" seconds.";
+    const time = document.createElement("p");
+    time.textContent = "Your response time: " + responseTime + " seconds.";
 
-    const save=document.createElement("p");
-    save.id="saveStatus";
-    save.textContent=saved
-        ?"Training result saved to the server."
-        :"Could not save this result to the server. You can continue training.";
+    const save = document.createElement("p");
+    save.id = "saveStatus";
+    save.textContent = saved
+        ? "Training result saved to the server."
+        : "Could not save this result to the server. You can continue training.";
 
-    const next=document.createElement("button");
-    next.type="button";
-    next.textContent=completedScenarios+1>=sessionScenarios.length
-        ?"View Final Results":"Continue to Next Scenario";
-    next.onclick=continueTraining;
+    const next = document.createElement("button");
+    next.type = "button";
+    next.textContent =
+        completedScenarios + 1 >= sessionScenarios.length
+            ? "View Final Results"
+            : "Continue to Next Scenario";
+    next.onclick = continueTraining;
 
-    feedback.append(h,p,time,save,next);
+    feedback.append(h, p, time, save, next);
     box.appendChild(feedback);
 }
 
 function continueTraining() {
-    if(!responseInProgress) return;
+    if (!responseInProgress) return;
 
     completedScenarios++;
-    responseInProgress=false;
-    currentScenario=null;
+    responseInProgress = false;
+    currentScenario = null;
 
-    if(completedScenarios>=sessionScenarios.length) {
+    if (completedScenarios >= sessionScenarios.length) {
         finishTraining();
         return;
     }
 
-    $("scenarioNumber").textContent=(completedScenarios+1)+" / "+sessionScenarios.length;
-    $("timer").textContent=sessionTimeLimit;
+    $("scenarioNumber").textContent =
+        (completedScenarios + 1) + " / " + sessionScenarios.length;
+    $("timer").textContent = sessionTimeLimit;
+
     beginPrompt();
 }
+
+/* ---------------- FINAL SESSION RESULTS ---------------- */
 
 function finishTraining() {
     clearInterval(timerInterval);
 
-    const avg=Math.round(totalResponseTime/sessionScenarios.length);
-    const percentage=Math.round((correctAnswers/sessionScenarios.length)*100);
-    const performance=percentage>=80?"Excellent":percentage>=60?"Good":percentage>=40?"Needs Improvement":"Requires Further Training";
+    const avg = Math.round(totalResponseTime / sessionScenarios.length);
+    const percentage = Math.round(
+        (correctAnswers / sessionScenarios.length) * 100
+    );
 
-    $("scenarioNumber").textContent="Complete";
-    $("timer").textContent="0";
+    const performance = percentage >= 80
+        ? "Excellent"
+        : percentage >= 60
+            ? "Good"
+            : percentage >= 40
+                ? "Needs Improvement"
+                : "Requires Further Training";
 
-    const result={
+    $("scenarioNumber").textContent = "Complete";
+    $("timer").textContent = "0";
+
+    const result = {
         username,
         score,
-        completed:completedScenarios,
-        correct:correctAnswers,
-        averageTime:avg,
+        completed: completedScenarios,
+        correct: correctAnswers,
+        averageTime: avg,
         performance,
         difficulty,
         percentage,
-        feedback:"Review your decisions and continue practicing situational awareness, communication, decision-making and response time."
+        feedback:
+            "Review your decisions and continue practicing situational awareness, " +
+            "communication, crew coordination and response time."
     };
 
-    localStorage.setItem("trainingResult",JSON.stringify(result));
+    localStorage.setItem("trainingResult", JSON.stringify(result));
 
-    const box=$("scenario");
+    const box = $("scenario");
     box.replaceChildren();
 
-    addText(box,"h2","Training Completed");
-    addText(box,"p","Trainee: "+username);
+    addText(box, "h2", "Training Completed");
+    addText(box, "p", "Trainee: " + username);
 
-    const grid=document.createElement("div");
-    grid.className="results-grid";
-    addResultItem(grid,"Difficulty",difficulty);
-    addResultItem(grid,"Final Score",score+" points");
-    addResultItem(grid,"Scenarios Completed",completedScenarios+" / "+sessionScenarios.length);
-    addResultItem(grid,"Correct Decisions",correctAnswers+" / "+sessionScenarios.length);
-    addResultItem(grid,"Session Accuracy",percentage+"%");
-    addResultItem(grid,"Average Response Time",avg+" seconds");
-    addResultItem(grid,"Performance",performance);
+    const grid = document.createElement("div");
+    grid.className = "results-grid";
+
+    addResultItem(grid, "Difficulty", difficulty);
+    addResultItem(grid, "Final Score", score + " points");
+    addResultItem(
+        grid,
+        "Scenarios Completed",
+        completedScenarios + " / " + sessionScenarios.length
+    );
+    addResultItem(
+        grid,
+        "Correct Decisions",
+        correctAnswers + " / " + sessionScenarios.length
+    );
+    addResultItem(grid, "Session Accuracy", percentage + "%");
+    addResultItem(grid, "Average Response Time", avg + " seconds");
+    addResultItem(grid, "Performance", performance);
+
     box.appendChild(grid);
 
-    addText(box,"h3","Training Feedback");
-    addText(box,"p",result.feedback);
+    addText(box, "h3", "Training Feedback");
+    addText(box, "p", result.feedback);
 
-    const actions=document.createElement("div");
-    actions.className="result-actions";
+    const actions = document.createElement("div");
+    actions.className = "result-actions";
 
-    const dashboard=document.createElement("button");
-    dashboard.textContent="View Performance Dashboard";
-    dashboard.onclick=()=>{window.location.href="dashboard.html";};
-
-    const retry=document.createElement("button");
-    retry.textContent="Train Again";
-    retry.onclick=async()=>{
-        difficultyLoaded=false;
-        await refreshDifficulty();
-        startTraining();
+    const dashboard = document.createElement("button");
+    dashboard.textContent = "View Performance Dashboard";
+    dashboard.onclick = () => {
+        window.location.href = "dashboard.html";
     };
 
-    const refresh=document.createElement("button");
-    refresh.textContent="Update Recommendation";
-    refresh.onclick=async()=>{
-        difficultyLoaded=false;
+    const retry = document.createElement("button");
+    retry.textContent = "Train Again";
+    retry.onclick = async () => {
+        difficultyLoaded = false;
         await refreshDifficulty();
-        const note=document.createElement("p");
-        note.textContent="Next session: "+difficulty+" difficulty — "+sessionScenarioCount+
-            " scenarios, "+sessionTimeLimit+" seconds per decision.";
+        await startTraining();
+    };
+
+    const refresh = document.createElement("button");
+    refresh.textContent = "Update Recommendation";
+    refresh.onclick = async () => {
+        difficultyLoaded = false;
+        await refreshDifficulty();
+
+        const note = document.createElement("p");
+        note.textContent =
+            "Next session: " + difficulty + " difficulty — " +
+            sessionScenarioCount + " scenarios, " +
+            sessionTimeLimit + " seconds per decision.";
+
         box.appendChild(note);
     };
 
-    actions.append(dashboard,retry,refresh);
+    actions.append(dashboard, retry, refresh);
     box.appendChild(actions);
 
-    difficultyLoaded=false;
+    /*
+     * Refresh the recommendation after results have been saved,
+     * so the next session can use the latest backend analysis.
+     */
+    difficultyLoaded = false;
     refreshDifficulty();
 }
 
+function addResultItem(container, label, value) {
+    const item = document.createElement("div");
+    item.className = "result-item";
 
-function addResultItem(container,label,value) {
-    const item=document.createElement("div");
-    item.className="result-item";
-    const strong=document.createElement("strong");
-    strong.textContent=label;
-    const span=document.createElement("span");
-    span.textContent=value;
-    item.append(strong,span);
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+
+    const span = document.createElement("span");
+    span.textContent = value;
+
+    item.append(strong, span);
     container.appendChild(item);
 }
 
-function addText(container,tag,value) {
-    const element=document.createElement(tag);
-    element.textContent=value;
+function addText(container, tag, value) {
+    const element = document.createElement(tag);
+    element.textContent = value;
     container.appendChild(element);
 }
+
+/* ---------------- INITIALIZATION ---------------- */
 
 refreshDifficulty();
 </script>
