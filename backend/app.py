@@ -31,7 +31,7 @@ def status():
             "Performance analysis",
             "Adaptive difficulty"
         ],
-        "version": "2.0"
+        "version": "2.1"
     })
 
 
@@ -46,7 +46,9 @@ def evaluate():
     try:
         response_time = max(0, float(data.get("response_time", 0)))
     except (TypeError, ValueError):
-        return jsonify({"error": "response_time must be a number"}), 400
+        return jsonify({
+            "error": "response_time must be a number"
+        }), 400
 
     if scenario is None or not decision:
         return jsonify({
@@ -69,7 +71,9 @@ def evaluate():
         )
     except Exception:
         app.logger.exception("Could not save training result")
-        return jsonify({"error": "Could not save training result"}), 500
+        return jsonify({
+            "error": "Could not save training result"
+        }), 500
 
     return jsonify({
         "trainee": trainee,
@@ -90,7 +94,9 @@ def results():
         return jsonify(get_all_results())
     except Exception:
         app.logger.exception("Could not retrieve training results")
-        return jsonify({"error": "Could not retrieve results"}), 500
+        return jsonify({
+            "error": "Could not retrieve results"
+        }), 500
 
 
 @app.route("/api/analysis", methods=["GET"])
@@ -98,15 +104,21 @@ def analysis():
     try:
         records = get_all_results()
         summary = analyze_performance(records)
+
         return jsonify({
             "status": "success",
             "analysis": summary
         })
     except Exception:
         app.logger.exception("Performance analysis failed")
-        return jsonify({"error": "Could not analyze performance"}), 500
+        return jsonify({
+            "error": "Could not analyze performance"
+        }), 500
 
 
+# All three URLs now access the same adaptive-difficulty function.
+@app.route("/api/difficulty", methods=["GET"])
+@app.route("/api/adaptive-difficulty", methods=["GET"])
 @app.route("/api/recommend-difficulty", methods=["GET"])
 def difficulty():
     trainee = request.args.get("trainee", "").strip()
@@ -117,7 +129,8 @@ def difficulty():
         if trainee:
             records = [
                 record for record in records
-                if str(record.get("trainee", "")).lower() == trainee.lower()
+                if str(record.get("trainee", "")).lower()
+                == trainee.lower()
             ]
 
         recommendation = recommend_difficulty(records)
