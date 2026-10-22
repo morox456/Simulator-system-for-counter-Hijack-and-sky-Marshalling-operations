@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,273 +6,1257 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sky Marshal | Performance Dashboard</title>
 <link rel="stylesheet" href="style.css">
+
 <style>
-:root{color-scheme:dark}
-body{margin:0;padding:20px;background:#0f1720;color:#eef4fb;font-family:Arial,sans-serif}
-.dashboard-container{max-width:1180px;margin:20px auto}
-.header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-.header h1{margin:0 0 8px;font-size:clamp(25px,4vw,36px)}
-.muted{color:#aebed0}
-.actions{display:flex;gap:9px;flex-wrap:wrap}
-button,.link-button{border:0;border-radius:7px;padding:11px 15px;background:#1976c9;color:#fff;text-decoration:none;font-weight:bold;cursor:pointer}
-button:hover,.link-button:hover{background:#125a98}
-.status{padding:13px 15px;background:#1a2a3b;border:1px solid #30465e;border-radius:8px;margin:16px 0;color:#d8e7f7}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin:20px 0}
-.card{background:#172333;border:1px solid #2b4057;border-radius:12px;padding:19px;min-width:0}
-.stat-label{font-size:13px;color:#b6c7d9;margin-bottom:10px}
-.stat-value{font-size:clamp(25px,3vw,32px);font-weight:bold;color:#69b4ff;overflow-wrap:anywhere}
-.card h2{font-size:19px;margin:0 0 15px}
-.two-col{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-top:16px}
-.bar-list{display:grid;gap:14px}
-.bar-row{display:grid;grid-template-columns:minmax(100px,150px) 1fr 45px;gap:10px;align-items:center;font-size:13px}
-.bar-track{height:12px;background:#29394b;border-radius:99px;overflow:hidden}
-.bar-fill{height:100%;width:0;background:#3498db;border-radius:99px;transition:width .3s}
-.recommendation{border-left:4px solid #3498db}
-.pill{display:inline-block;background:#234f75;color:#d9efff;padding:6px 10px;border-radius:99px;font-size:12px;font-weight:bold}
-.insights{padding-left:20px;margin-bottom:0;line-height:1.7;color:#d7e3f0}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:700px}
-th,td{padding:12px;text-align:left;border-bottom:1px solid #314256;font-size:13px}
-th{color:#8fc8ff;font-weight:bold}
-.good{color:#62dfa0;font-weight:bold}.bad{color:#ff9292;font-weight:bold}
-.empty{text-align:center;padding:24px;color:#b6c7d9}
-.section{margin-top:17px}
-.footer-note{font-size:12px;color:#91a5bb;line-height:1.6;margin-top:15px}
-@media(max-width:760px){body{padding:10px}.two-col{grid-template-columns:1fr}.card{padding:15px}.bar-row{grid-template-columns:100px 1fr 35px}}
+:root { color-scheme: dark; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #0f1720;
+    color: #eef4fb;
+    font-family: Arial, sans-serif;
+}
+
+.dashboard-container {
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+}
+
+.header h1 {
+    margin: 0 0 8px;
+    font-size: clamp(25px, 4vw, 36px);
+}
+
+.muted { color: #aebed0; }
+
+.actions {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+button, .link-button {
+    border: 0;
+    border-radius: 7px;
+    padding: 11px 15px;
+    background: #1976c9;
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button:hover, .link-button:hover {
+    background: #125a98;
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: wait;
+}
+
+.status {
+    padding: 13px 15px;
+    background: #1a2a3b;
+    border: 1px solid #30465e;
+    border-radius: 8px;
+    margin: 16px 0;
+    color: #d8e7f7;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+}
+
+.card {
+    background: #172333;
+    border: 1px solid #2b4057;
+    border-radius: 12px;
+    padding: 19px;
+    min-width: 0;
+}
+
+.card h2 {
+    font-size: 19px;
+    margin: 0 0 15px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #b6c7d9;
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: clamp(25px, 3vw, 32px);
+    font-weight: bold;
+    color: #69b4ff;
+    overflow-wrap: anywhere;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.bar-list {
+    display: grid;
+    gap: 14px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 155px) 1fr 45px;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+}
+
+.bar-track {
+    height: 12px;
+    background: #29394b;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    width: 0;
+    background: #3498db;
+    border-radius: 99px;
+    transition: width .3s;
+}
+
+.recommendation {
+    border-left: 4px solid #3498db;
+}
+
+.pill {
+    display: inline-block;
+    background: #234f75;
+    color: #d9efff;
+    padding: 7px 11px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.pill.easy { background: #204b38; color: #8ef0b9; }
+.pill.medium { background: #57451e; color: #ffe09a; }
+.pill.hard { background: #5a2930; color: #ffb2ba; }
+
+.insights {
+    padding-left: 20px;
+    margin-bottom: 0;
+    line-height: 1.8;
+    color: #d7e3f0;
+}
+
+.insights li { margin-bottom: 7px; }
+
+.topic-card {
+    margin-top: 16px;
+}
+
+.topic-item {
+    padding: 13px 0;
+    border-bottom: 1px solid #2b4057;
+}
+
+.topic-item:last-child { border-bottom: 0; }
+
+.topic-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+    font-size: 14px;
+}
+
+.topic-name {
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.topic-percent {
+    color: #8fc8ff;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.topic-meta {
+    font-size: 12px;
+    color: #aebed0;
+    margin-top: 7px;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.insight-panel {
+    background: #131f2d;
+    border: 1px solid #2b4057;
+    border-radius: 9px;
+    padding: 15px;
+    min-width: 0;
+}
+
+.insight-panel h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+}
+
+.insight-panel.strength h3 { color: #62dfa0; }
+.insight-panel.weakness h3 { color: #ff9292; }
+
+.advice-box {
+    background: #132a3d;
+    border: 1px solid #294d69;
+    border-radius: 9px;
+    padding: 15px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.table-wrap { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #314256;
+    font-size: 13px;
+}
+
+th {
+    color: #8fc8ff;
+    font-weight: bold;
+}
+
+.good { color: #62dfa0; font-weight: bold; }
+.bad { color: #ff9292; font-weight: bold; }
+
+.empty {
+    text-align: center;
+    padding: 24px;
+    color: #b6c7d9;
+}
+
+.section { margin-top: 17px; }
+
+.footer-note {
+    font-size: 12px;
+    color: #91a5bb;
+    line-height: 1.6;
+    margin-top: 15px;
+}
+
+@media (max-width: 760px) {
+    body { padding: 10px; }
+    .two-col, .insight-grid { grid-template-columns: 1fr; }
+    .card { padding: 15px; }
+    .bar-row { grid-template-columns: 100px 1fr 35px; }
+}
 </style>
 </head>
+
 <body>
 <main class="dashboard-container">
-  <header class="header">
+
+<header class="header">
     <div>
-      <h1>Performance Dashboard</h1>
-      <div class="muted">Sky Marshal Simulator · Training progress and decision analysis</div>
+        <h1>Performance Dashboard</h1>
+        <div class="muted">
+            Sky Marshal Simulator · Training progress and decision analysis
+        </div>
     </div>
+
     <nav class="actions">
-      <button id="refreshBtn" type="button">Refresh Results</button>
-      <a class="link-button" href="simulator.html">Back to Simulator</a>
-      <a class="link-button" href="index.html">Home</a>
+        <button id="refreshBtn" type="button">Refresh Results</button>
+        <a class="link-button" href="simulator.html">Back to Simulator</a>
+        <a class="link-button" href="index.html">Home</a>
     </nav>
-  </header>
+</header>
 
-  <div id="statusMessage" class="status" role="status">Loading training records...</div>
+<div id="statusMessage" class="status" role="status">
+    Loading training records...
+</div>
 
-  <section class="stats-grid" aria-label="Training summary">
-    <div class="card"><div class="stat-label">Total Attempts</div><div id="totalAttempts" class="stat-value">—</div></div>
-    <div class="card"><div class="stat-label">Unique Trainees</div><div id="totalTrainees" class="stat-value">—</div></div>
-    <div class="card"><div class="stat-label">Correct Decisions</div><div id="correctDecisions" class="stat-value">—</div></div>
-    <div class="card"><div class="stat-label">Average Score</div><div id="averageScore" class="stat-value">—</div></div>
-    <div class="card"><div class="stat-label">Avg. Response Time</div><div id="averageTime" class="stat-value">—</div></div>
-    <div class="card"><div class="stat-label">Decision Accuracy</div><div id="accuracy" class="stat-value">—</div></div>
-  </section>
-
-  <section class="two-col">
+<section class="stats-grid" aria-label="Training summary">
     <div class="card">
-      <h2>Performance Breakdown</h2>
-      <div id="performanceBars" class="bar-list">
-        <div class="muted">Your performance metrics will appear here after loading results.</div>
-      </div>
+        <div class="stat-label">Total Attempts</div>
+        <div id="totalAttempts" class="stat-value">—</div>
     </div>
+    <div class="card">
+        <div class="stat-label">Unique Trainees</div>
+        <div id="totalTrainees" class="stat-value">—</div>
+    </div>
+    <div class="card">
+        <div class="stat-label">Correct Decisions</div>
+        <div id="correctDecisions" class="stat-value">—</div>
+    </div>
+    <div class="card">
+        <div class="stat-label">Average Score</div>
+        <div id="averageScore" class="stat-value">—</div>
+    </div>
+    <div class="card">
+        <div class="stat-label">Avg. Response Time</div>
+        <div id="averageTime" class="stat-value">—</div>
+    </div>
+    <div class="card">
+        <div class="stat-label">Decision Accuracy</div>
+        <div id="accuracy" class="stat-value">—</div>
+    </div>
+</section>
+
+<section class="two-col">
+
+    <div class="card">
+        <h2>Performance Breakdown</h2>
+        <div id="performanceBars" class="bar-list">
+            <div class="muted">Loading performance metrics...</div>
+        </div>
+    </div>
+
     <div class="card recommendation">
-      <h2>Adaptive Training Recommendation</h2>
-      <div id="difficultyPill" class="pill">Checking recommendation…</div>
-      <p id="recommendationText" class="muted">Fetching your recommended difficulty from the backend.</p>
-      <button id="refreshRecommendation" type="button">Refresh Recommendation</button>
-      <p class="footer-note">The current recommendation uses rule-based analysis of stored results; it is not a trained machine-learning model.</p>
-    </div>
-  </section>
+        <h2>Adaptive Training Recommendation</h2>
 
-  <section class="two-col">
-    <div class="card">
-      <h2>Recent Session Scores</h2>
-      <div id="scoreBars" class="bar-list"><div class="muted">Loading score history…</div></div>
-    </div>
-    <div class="card">
-      <h2>Performance Insights</h2>
-      <ul id="insights" class="insights"><li>Loading insights…</li></ul>
-    </div>
-  </section>
+        <div id="difficultyPill" class="pill">
+            Checking recommendation...
+        </div>
 
-  <section class="card section">
+        <p id="recommendationText" class="muted">
+            Fetching your recommended difficulty from the backend.
+        </p>
+
+        <p id="recommendationReason" class="muted"></p>
+
+        <button id="refreshRecommendation" type="button">
+            Refresh Recommendation
+        </button>
+
+        <p class="footer-note">
+            Recommendations are generated using rule-based analysis of saved
+            training results, not a trained machine-learning model.
+        </p>
+    </div>
+
+</section>
+
+<section class="two-col">
+
+    <div class="card">
+        <h2>Recent Session Scores</h2>
+        <div id="scoreBars" class="bar-list">
+            <div class="muted">Loading score history...</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Performance Trend Insights</h2>
+        <ul id="insights" class="insights">
+            <li>Loading insights...</li>
+        </ul>
+    </div>
+
+</section>
+
+<section class="card topic-card">
+    <h2>Topic-wise Performance Analysis</h2>
+    <p class="muted">
+        Accuracy and scores grouped by the topic information saved with each
+        scenario attempt.
+    </p>
+
+    <div id="topicAnalysis">
+        <div class="muted">Calculating topic performance...</div>
+    </div>
+</section>
+
+<section class="card section">
+    <h2>Strengths and Areas to Improve</h2>
+
+    <div class="insight-grid">
+        <div class="insight-panel strength">
+            <h3>Your Strengths</h3>
+            <ul id="strengths" class="insights">
+                <li>Analyzing saved results...</li>
+            </ul>
+        </div>
+
+        <div class="insight-panel weakness">
+            <h3>Areas to Improve</h3>
+            <ul id="weaknesses" class="insights">
+                <li>Analyzing saved results...</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="card section">
+    <h2>Personalized Training Advice</h2>
+    <div id="personalizedAdvice" class="advice-box">
+        Personalized advice will appear after analysis.
+    </div>
+</section>
+
+<section class="card section">
     <h2>Training History</h2>
+
     <div class="table-wrap">
-      <table>
-        <thead><tr><th>Trainee</th><th>Scenario</th><th>Decision</th><th>Result</th><th>Score</th><th>Response Time</th><th>Date</th></tr></thead>
-        <tbody id="resultsTable"><tr><td colspan="7" class="empty">Loading results…</td></tr></tbody>
-      </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Trainee</th>
+                    <th>Scenario</th>
+                    <th>Topic</th>
+                    <th>Decision</th>
+                    <th>Result</th>
+                    <th>Score</th>
+                    <th>Response Time</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+
+            <tbody id="resultsTable">
+                <tr>
+                    <td colspan="8" class="empty">Loading results...</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-  </section>
-  <p class="footer-note">This dashboard summarizes fictional training simulations only. It is not an operational aviation-security decision system.</p>
+</section>
+
+<p class="footer-note">
+    This dashboard summarizes fictional training simulations only. It is not
+    an operational aviation-security decision system.
+</p>
+
 </main>
 
 <script>
 "use strict";
-const API_BASE="https://sky-marshal-backend.onrender.com/api";
-const $=id=>document.getElementById(id);
-const trainee=(localStorage.getItem("username")||"Guest").trim()||"Guest";
-let allResults=[];
 
-$("refreshBtn").addEventListener("click",loadDashboard);
-$("refreshRecommendation").addEventListener("click",loadRecommendation);
+const API_BASE = "https://sky-marshal-backend.onrender.com/api";
+const $ = id => document.getElementById(id);
 
-function asNumber(value){const n=Number(value);return Number.isFinite(n)?n:0;}
-function isCorrect(item){
-  const result=String(item.result??item.status??"").toLowerCase();
-  if(["correct","true","success"].includes(result)) return true;
-  if(["incorrect","false","wrong","timeout"].includes(result)) return false;
-  return item.correct===true;
-}
-function safeDate(value){
-  if(!value)return "N/A";
-  const d=new Date(value);
-  return Number.isNaN(d.getTime())?String(value):d.toLocaleString();
-}
-function setText(id,value){$(id).textContent=value;}
+const trainee =
+    (localStorage.getItem("username") || "Guest").trim() || "Guest";
 
-async function loadDashboard(){
-  setText("statusMessage","Loading training records from the backend…");
-  $("refreshBtn").disabled=true;
-  try{
-    const response=await fetch(API_BASE+"/results",{cache:"no-store"});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.error||"Backend request failed");
-    const records=Array.isArray(data)?data:(Array.isArray(data.results)?data.results:null);
-    if(!records)throw new Error("The results endpoint returned an unexpected format.");
-    allResults=records.slice().sort((a,b)=>new Date(b.created_at||b.timestamp||0)-new Date(a.created_at||a.timestamp||0));
-    renderStatistics(allResults);
-    renderHistory(allResults);
-    renderScoreBars(allResults);
-    renderInsights(allResults);
-    setText("statusMessage","Dashboard updated successfully · "+allResults.length+" saved scenario record(s).");
-  }catch(error){
-    console.error(error);
-    setText("statusMessage","Could not load results from the backend. Check that the Render service is awake, then refresh.");
-    $("resultsTable").innerHTML='<tr><td colspan="7" class="empty">Training history is temporarily unavailable.</td></tr>';
-    $("performanceBars").innerHTML='<div class="muted">Metrics are unavailable until the backend responds.</div>';
-    $("scoreBars").innerHTML='<div class="muted">Score history is unavailable.</div>';
-    $("insights").innerHTML='<li>Unable to calculate insights without training records.</li>';
-  }finally{$("refreshBtn").disabled=false;}
-  await loadRecommendation();
+let allResults = [];
+let analysisData = null;
+
+$("refreshBtn").addEventListener("click", loadDashboard);
+$("refreshRecommendation").addEventListener("click", loadRecommendation);
+
+function asNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
 }
 
-function renderStatistics(records){
-  const total=records.length;
-  const correct=records.filter(isCorrect).length;
-  const unique=new Set(records.map(r=>r.trainee||r.username||"Guest"));
-  const avgScore=total?records.reduce((s,r)=>s+asNumber(r.score),0)/total:0;
-  const avgTime=total?records.reduce((s,r)=>s+asNumber(r.response_time),0)/total:0;
-  const accuracy=total?Math.round(correct/total*100):0;
-  setText("totalAttempts",total);
-  setText("totalTrainees",unique.size);
-  setText("correctDecisions",correct);
-  setText("averageScore",avgScore.toFixed(1));
-  setText("averageTime",avgTime.toFixed(1)+"s");
-  setText("accuracy",accuracy+"%");
-  renderBars("performanceBars",[
-    {label:"Decision accuracy",value:accuracy,max:100,suffix:"%"},
-    {label:"Average score",value:Math.min(100,avgScore*10),max:100,suffix:"%"},
-    {label:"Response speed",value:Math.max(0,100-Math.min(100,avgTime*2)),max:100,suffix:"%"}
-  ]);
+function setText(id, value) {
+    $(id).textContent = value;
 }
 
-function renderBars(targetId,items){
-  const target=$(targetId);target.replaceChildren();
-  if(!items.length){target.innerHTML='<div class="muted">No data available yet.</div>';return;}
-  items.forEach(item=>{
-    const row=document.createElement("div");row.className="bar-row";
-    const label=document.createElement("span");label.textContent=item.label;
-    const track=document.createElement("div");track.className="bar-track";
-    const fill=document.createElement("div");fill.className="bar-fill";
-    fill.style.width=Math.max(0,Math.min(100,item.value))+"%";
-    track.appendChild(fill);
-    const value=document.createElement("strong");value.textContent=item.display??(Math.round(item.value)+(item.suffix||""));
-    row.append(label,track,value);target.appendChild(row);
-  });
+function isCorrect(item) {
+    const result = String(
+        item.result ?? item.status ?? ""
+    ).toLowerCase();
+
+    if (["correct", "true", "success"].includes(result)) return true;
+
+    if (["incorrect", "false", "wrong", "timeout"].includes(result)) {
+        return false;
+    }
+
+    return item.correct === true;
 }
 
-function renderScoreBars(records){
-  const target=$("scoreBars");target.replaceChildren();
-  const recent=records.slice(0,6).reverse();
-  if(!recent.length){target.innerHTML='<div class="muted">Complete a simulator session to start building score history.</div>';return;}
-  const max=Math.max(10,...recent.map(r=>asNumber(r.score)));
-  recent.forEach((r,i)=>{
-    const row=document.createElement("div");row.className="bar-row";
-    const label=document.createElement("span");label.textContent="Attempt "+(records.length-recent.length+i+1);
-    const track=document.createElement("div");track.className="bar-track";
-    const fill=document.createElement("div");fill.className="bar-fill";fill.style.width=Math.max(0,Math.min(100,asNumber(r.score)/max*100))+"%";
-    track.appendChild(fill);
-    const value=document.createElement("strong");value.textContent=String(asNumber(r.score));
-    row.append(label,track,value);target.appendChild(row);
-  });
+function safeDate(value) {
+    if (!value) return "N/A";
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? String(value)
+        : date.toLocaleString();
 }
 
-function renderInsights(records){
-  const list=$("insights");list.replaceChildren();
-  if(!records.length){addInsight(list,"No training records yet. Complete a session to generate insights.");return;}
-  const correct=records.filter(isCorrect).length;
-  const accuracy=Math.round(correct/records.length*100);
-  const avgTime=records.reduce((s,r)=>s+asNumber(r.response_time),0)/records.length;
-  addInsight(list,"Overall decision accuracy is "+accuracy+"% across "+records.length+" recorded scenario attempt(s).");
-  addInsight(list,accuracy>=80?"Strong consistency so far. Continue practicing to maintain performance.":accuracy>=60?"Build consistency by reviewing incorrect decisions and their feedback.":"Focus on carefully reading each scenario and choosing a considered response.");
-  addInsight(list,"Average response time is "+avgTime.toFixed(1)+" seconds.");
-  if(records.length>=4){
-    const half=Math.floor(records.length/2);
-    const newer=records.slice(0,half),older=records.slice(half);
-    const rate=arr=>arr.filter(isCorrect).length/arr.length*100;
-    const delta=Math.round(rate(newer)-rate(older));
-    addInsight(list,delta>0?"Recent accuracy is up "+delta+" percentage points compared with older records.":delta<0?"Recent accuracy is down "+Math.abs(delta)+" percentage points; review recent decisions.":"Recent accuracy is similar to earlier records.");
-  }else addInsight(list,"Complete more sessions to compare recent performance with earlier attempts.");
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
 }
-function addInsight(list,text){const li=document.createElement("li");li.textContent=text;list.appendChild(li);}
 
-function renderHistory(records){
-  const tbody=$("resultsTable");tbody.replaceChildren();
-  if(!records.length){tbody.innerHTML='<tr><td colspan="7" class="empty">No training records yet. Complete a simulator session to see results here.</td></tr>';return;}
-  records.slice(0,100).forEach(item=>{
-    const row=document.createElement("tr");
-    const result=isCorrect(item)?"Correct":"Incorrect";
-    const values=[
-      item.trainee||item.username||"Guest",
-      "Scenario "+(item.scenario??"N/A"),
-      item.decision||"N/A",
-      result,
-      String(asNumber(item.score)),
-      asNumber(item.response_time)+"s",
-      safeDate(item.created_at||item.timestamp)
-    ];
-    values.forEach((value,index)=>{
-      const td=document.createElement("td");td.textContent=value;
-      if(index===3)td.className=result==="Correct"?"good":"bad";
-      row.appendChild(td);
+function getTopic(item) {
+    if (item.topic && String(item.topic).trim()) {
+        return String(item.topic).trim();
+    }
+
+    const scenario = String(item.scenario ?? "").toLowerCase();
+
+    const topics = {
+        "1": "Situational Awareness",
+        "2": "Communication",
+        "3": "Decision Making",
+        "4": "Risk Assessment",
+        "5": "Emergency Response"
+    };
+
+    if (topics[scenario]) return topics[scenario];
+
+    const match = scenario.match(/scenario\s*(\d+)/);
+
+    if (match && topics[match[1]]) {
+        return topics[match[1]];
+    }
+
+    return "General Training";
+}
+
+function getScenarioLabel(item) {
+    const scenario = item.scenario ?? "N/A";
+    return /^\d+$/.test(String(scenario))
+        ? "Scenario " + scenario
+        : String(scenario);
+}
+
+async function fetchJSON(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || "Request failed: " + response.status);
+    }
+
+    return data;
+}
+
+async function loadDashboard() {
+    setText("statusMessage", "Loading training records...");
+    $("refreshBtn").disabled = true;
+
+    try {
+        const data = await fetchJSON(API_BASE + "/results");
+
+        const records = Array.isArray(data)
+            ? data
+            : Array.isArray(data.results)
+                ? data.results
+                : null;
+
+        if (!records) {
+            throw new Error("Unexpected results format.");
+        }
+
+        allResults = records.slice().sort((a, b) => {
+            const dateA = new Date(a.created_at || a.timestamp || 0);
+            const dateB = new Date(b.created_at || b.timestamp || 0);
+            return dateB - dateA;
+        });
+
+        renderStatistics(allResults);
+        renderHistory(allResults);
+        renderScoreBars(allResults);
+        renderInsights(allResults);
+        renderTopicAnalysis(allResults);
+        renderLocalStrengthsAndWeaknesses(allResults);
+
+        setText(
+            "statusMessage",
+            "Dashboard updated successfully · " +
+            allResults.length + " saved scenario record(s)."
+        );
+
+        await loadPersonalizedAnalysis();
+
+    } catch (error) {
+        console.error("Dashboard error:", error);
+
+        setText(
+            "statusMessage",
+            "Could not load results. Check that the Render backend is awake, then refresh."
+        );
+
+        $("resultsTable").innerHTML =
+            '<tr><td colspan="8" class="empty">Training history is temporarily unavailable.</td></tr>';
+
+        $("performanceBars").innerHTML =
+            '<div class="muted">Metrics are unavailable until the backend responds.</div>';
+
+        $("scoreBars").innerHTML =
+            '<div class="muted">Score history is unavailable.</div>';
+
+        $("topicAnalysis").innerHTML =
+            '<div class="muted">Topic analysis is unavailable.</div>';
+
+        $("insights").innerHTML =
+            "<li>Insights could not be calculated because results could not be loaded.</li>";
+
+        $("strengths").innerHTML =
+            "<li>No strengths available until results load.</li>";
+
+        $("weaknesses").innerHTML =
+            "<li>No improvement areas available until results load.</li>";
+
+        setText("personalizedAdvice", "Load training records to receive personalized advice.");
+
+    } finally {
+        $("refreshBtn").disabled = false;
+    }
+
+    await loadRecommendation();
+}
+
+function renderStatistics(records) {
+    const total = records.length;
+    const correct = records.filter(isCorrect).length;
+
+    const uniqueTrainees = new Set(
+        records.map(r => r.trainee || r.username || "Guest")
+    );
+
+    const averageScore = total
+        ? records.reduce((sum, r) => sum + asNumber(r.score), 0) / total
+        : 0;
+
+    const averageTime = total
+        ? records.reduce((sum, r) => sum + asNumber(r.response_time), 0) / total
+        : 0;
+
+    const accuracy = total
+        ? Math.round(correct / total * 100)
+        : 0;
+
+    setText("totalAttempts", total);
+    setText("totalTrainees", uniqueTrainees.size);
+    setText("correctDecisions", correct);
+    setText("averageScore", averageScore.toFixed(1));
+    setText("averageTime", averageTime.toFixed(1) + "s");
+    setText("accuracy", accuracy + "%");
+
+    const speedScore = averageTime > 0
+        ? Math.max(0, Math.min(100, 100 - averageTime * 2))
+        : 0;
+
+    renderBars("performanceBars", [
+        {
+            label: "Decision accuracy",
+            value: accuracy,
+            display: accuracy + "%"
+        },
+        {
+            label: "Average score",
+            value: Math.min(100, averageScore * 10),
+            display: averageScore.toFixed(1) + "/10"
+        },
+        {
+            label: "Response speed",
+            value: speedScore,
+            display: averageTime.toFixed(1) + "s"
+        }
+    ]);
+}
+
+function renderBars(targetId, items) {
+    const target = $(targetId);
+    target.replaceChildren();
+
+    if (!items.length) {
+        target.textContent = "No data available yet.";
+        return;
+    }
+
+    items.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+
+        const label = document.createElement("span");
+        label.textContent = item.label;
+
+        const track = document.createElement("div");
+        track.className = "bar-track";
+
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = Math.max(0, Math.min(100, item.value)) + "%";
+
+        track.appendChild(fill);
+
+        const value = document.createElement("strong");
+        value.textContent = item.display;
+
+        row.append(label, track, value);
+        target.appendChild(row);
     });
-    tbody.appendChild(row);
-  });
 }
 
-function parseDifficulty(data){
-  const r=data?.recommendation;
-  let raw=typeof r==="string"?r:[r?.difficulty,r?.level,r?.message,data?.difficulty,data?.level,data?.message].filter(Boolean).join(" ");
-  const s=String(raw||"").toLowerCase();
-  if(s.includes("hard")||s.includes("advanced"))return {level:"Hard",message:typeof r==="object"?(r.message||"Recent results suggest a more challenging practice level."):"A more challenging practice level is recommended."};
-  if(s.includes("easy")||s.includes("beginner"))return {level:"Easy",message:typeof r==="object"?(r.message||"Review the fundamentals and build consistency."):"A foundational practice level is recommended."};
-  return {level:"Medium",message:typeof r==="object"?(r.message||"Continue with a balanced practice level."):"A balanced practice level is recommended."};
+function renderScoreBars(records) {
+    const target = $("scoreBars");
+    target.replaceChildren();
+
+    const recent = records.slice(0, 6).reverse();
+
+    if (!recent.length) {
+        target.textContent = "Complete a simulation to start building score history.";
+        return;
+    }
+
+    recent.forEach((record, index) => {
+        const score = asNumber(record.score);
+        const row = document.createElement("div");
+        row.className = "bar-row";
+
+        const label = document.createElement("span");
+        label.textContent = "Recent " + (index + 1);
+
+        const track = document.createElement("div");
+        track.className = "bar-track";
+
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = Math.max(0, Math.min(100, score * 10)) + "%";
+
+        track.appendChild(fill);
+
+        const value = document.createElement("strong");
+        value.textContent = score.toFixed(1) + "/10";
+
+        row.append(label, track, value);
+        target.appendChild(row);
+    });
 }
-async function loadRecommendation(){
-  setText("difficultyPill","Checking recommendation…");
-  setText("recommendationText","Fetching the latest saved-performance recommendation.");
-  try{
-    const response=await fetch(API_BASE+"/recommend-difficulty?trainee="+encodeURIComponent(trainee),{cache:"no-store"});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.error||"Recommendation request failed");
-    const rec=parseDifficulty(data);
-    setText("difficultyPill",rec.level+" difficulty");
-    setText("recommendationText",rec.message+" Suggested settings: "+(rec.level==="Easy"?"4 scenarios, 40 seconds each.":rec.level==="Hard"?"5 scenarios, 25 seconds each.":"5 scenarios, 30 seconds each."));
-  }catch(error){
-    console.warn("Recommendation unavailable",error);
-    setText("difficultyPill","Unavailable");
-    setText("recommendationText","Could not retrieve the recommendation. The simulator can still be used with its default settings.");
-  }
+
+function renderInsights(records) {
+    const list = $("insights");
+    list.replaceChildren();
+
+    if (!records.length) {
+        addListItem(list, "No training records yet. Complete a simulation to generate insights.");
+        return;
+    }
+
+    const accuracy = Math.round(
+        records.filter(isCorrect).length / records.length * 100
+    );
+
+    const averageTime = records.reduce(
+        (sum, r) => sum + asNumber(r.response_time), 0
+    ) / records.length;
+
+    addListItem(
+        list,
+        "Overall decision accuracy: " + accuracy + "% across " +
+        records.length + " saved scenario attempt(s)."
+    );
+
+    addListItem(
+        list,
+        accuracy >= 80
+            ? "Your saved results show strong decision consistency."
+            : accuracy >= 60
+                ? "Your results show a foundation to build on. Review incorrect decisions."
+                : "Focus on understanding each scenario before choosing a response."
+    );
+
+    addListItem(
+        list,
+        "Average response time: " + averageTime.toFixed(1) + " seconds."
+    );
+
+    if (records.length >= 4) {
+        const half = Math.floor(records.length / 2);
+        const recent = records.slice(0, half);
+        const older = records.slice(half);
+
+        const rate = items =>
+            items.filter(isCorrect).length / items.length * 100;
+
+        const difference = Math.round(rate(recent) - rate(older));
+
+        addListItem(
+            list,
+            difference > 0
+                ? "Recent accuracy improved by " + difference + " percentage points."
+                : difference < 0
+                    ? "Recent accuracy decreased by " + Math.abs(difference) +
+                      " percentage points. Review your latest decisions."
+                    : "Recent accuracy is similar to earlier attempts."
+        );
+    } else {
+        addListItem(list, "Complete more attempts to compare recent and earlier performance.");
+    }
 }
+
+function renderTopicAnalysis(records) {
+    const container = $("topicAnalysis");
+    container.replaceChildren();
+
+    if (!records.length) {
+        container.textContent = "Topic analysis will appear after your first saved attempt.";
+        return;
+    }
+
+    const groups = {};
+
+    records.forEach(record => {
+        const topic = getTopic(record);
+
+        if (!groups[topic]) {
+            groups[topic] = {
+                attempts: 0,
+                correct: 0,
+                score: 0
+            };
+        }
+
+        groups[topic].attempts++;
+        groups[topic].score += asNumber(record.score);
+
+        if (isCorrect(record)) {
+            groups[topic].correct++;
+        }
+    });
+
+    Object.entries(groups)
+        .sort((a, b) => {
+            const accuracyA = a[1].correct / a[1].attempts;
+            const accuracyB = b[1].correct / b[1].attempts;
+            return accuracyA - accuracyB;
+        })
+        .forEach(([topic, stats]) => {
+            const accuracy = Math.round(stats.correct / stats.attempts * 100);
+            const averageScore = stats.score / stats.attempts;
+
+            const item = document.createElement("div");
+            item.className = "topic-item";
+
+            const heading = document.createElement("div");
+            heading.className = "topic-heading";
+
+            const name = document.createElement("span");
+            name.className = "topic-name";
+            name.textContent = topic;
+
+            const percent = document.createElement("span");
+            percent.className = "topic-percent";
+            percent.textContent = accuracy + "% accuracy";
+
+            heading.append(name, percent);
+
+            const track = document.createElement("div");
+            track.className = "bar-track";
+
+            const fill = document.createElement("div");
+            fill.className = "bar-fill";
+            fill.style.width = accuracy + "%";
+
+            if (accuracy >= 80) {
+                fill.style.background = "#38b879";
+            } else if (accuracy < 60) {
+                fill.style.background = "#e06b75";
+            }
+
+            track.appendChild(fill);
+
+            const meta = document.createElement("div");
+            meta.className = "topic-meta";
+            meta.textContent =
+                stats.correct + "/" + stats.attempts +
+                " correct · Average score " + averageScore.toFixed(1) + "/10";
+
+            item.append(heading, track, meta);
+            container.appendChild(item);
+        });
+}
+
+function renderLocalStrengthsAndWeaknesses(records) {
+    const strengths = $("strengths");
+    const weaknesses = $("weaknesses");
+
+    strengths.replaceChildren();
+    weaknesses.replaceChildren();
+
+    if (!records.length) {
+        addListItem(strengths, "Complete training attempts to identify strengths.");
+        addListItem(weaknesses, "Complete training attempts to identify areas to improve.");
+        setText("personalizedAdvice", "Your training advice will appear here after you complete and save simulations.");
+        return;
+    }
+
+    const topics = {};
+
+    records.forEach(record => {
+        const topic = getTopic(record);
+
+        if (!topics[topic]) {
+            topics[topic] = { total: 0, correct: 0, score: 0, time: 0 };
+        }
+
+        topics[topic].total++;
+        topics[topic].score += asNumber(record.score);
+        topics[topic].time += asNumber(record.response_time);
+
+        if (isCorrect(record)) topics[topic].correct++;
+    });
+
+    const ranked = Object.entries(topics).map(([name, data]) => ({
+        name,
+        accuracy: data.correct / data.total * 100,
+        averageScore: data.score / data.total,
+        attempts: data.total,
+        averageTime: data.time / data.total
+    })).sort((a, b) => b.accuracy - a.accuracy);
+
+    const strong = ranked.filter(t => t.accuracy >= 80);
+    const weak = ranked.filter(t => t.accuracy < 60);
+
+    if (strong.length) {
+        strong.forEach(t => addListItem(
+            strengths,
+            t.name + ": " + Math.round(t.accuracy) +
+            "% accuracy across " + t.attempts + " attempt(s)."
+        ));
+    } else {
+        addListItem(
+            strengths,
+            "No topic has reached 80% accuracy yet. Keep practicing to establish consistent strengths."
+        );
+    }
+
+    if (weak.length) {
+        weak.forEach(t => addListItem(
+            weaknesses,
+            t.name + ": " + Math.round(t.accuracy) +
+            "% accuracy. Review feedback and practice this area."
+        ));
+    } else {
+        const middle = ranked.filter(t => t.accuracy >= 60 && t.accuracy < 80);
+
+        if (middle.length) {
+            middle.forEach(t => addListItem(
+                weaknesses,
+                t.name + ": " + Math.round(t.accuracy) +
+                "% accuracy. More practice could improve consistency."
+            ));
+        } else {
+            addListItem(
+                weaknesses,
+                "No low-accuracy topic was identified in the saved results. Continue practicing to maintain performance."
+            );
+        }
+    }
+
+    const lowest = ranked[ranked.length - 1];
+    const highest = ranked[0];
+    const overallAccuracy = Math.round(
+        records.filter(isCorrect).length / records.length * 100
+    );
+
+    let advice = "Continue practicing across different scenarios and review the feedback after every decision.";
+
+    if (overallAccuracy < 60) {
+        advice = "Prioritize careful scenario reading and review the explanation after every incorrect decision. Build consistency before increasing difficulty.";
+    } else if (overallAccuracy < 80) {
+        advice = "Practice the topics where your accuracy is lowest. Focus on consistent decisions and review mistakes before attempting harder scenarios.";
+    } else {
+        advice = "Your overall accuracy is strong. Continue practicing varied scenarios and focus on maintaining consistency while improving response time.";
+    }
+
+    if (lowest && lowest.name !== highest.name) {
+        advice += " Your lowest-performing topic in the saved records is " +
+            lowest.name + " (" + Math.round(lowest.accuracy) + "% accuracy).";
+    }
+
+    setText("personalizedAdvice", advice);
+}
+
+async function loadPersonalizedAnalysis() {
+    try {
+        const data = await fetchJSON(
+            API_BASE + "/analysis?trainee=" + encodeURIComponent(trainee)
+        );
+
+        analysisData = data.analysis || data;
+
+        const analysis = analysisData;
+        if (!analysis || typeof analysis !== "object") return;
+
+        const strengths = Array.isArray(analysis.strengths)
+            ? analysis.strengths
+            : [];
+
+        const weaknesses = Array.isArray(analysis.weak_areas)
+            ? analysis.weak_areas
+            : Array.isArray(analysis.weaknesses)
+                ? analysis.weaknesses
+                : [];
+
+        if (strengths.length) {
+            const list = $("strengths");
+            list.replaceChildren();
+            strengths.forEach(item => addListItem(
+                list,
+                typeof item === "string"
+                    ? item
+                    : item.topic || item.message || JSON.stringify(item)
+            ));
+        }
+
+        if (weaknesses.length) {
+            const list = $("weaknesses");
+            list.replaceChildren();
+            weaknesses.forEach(item => addListItem(
+                list,
+                typeof item === "string"
+                    ? item
+                    : item.topic || item.message || JSON.stringify(item)
+            ));
+        }
+
+        const recommendation = analysis.recommendation;
+
+        if (typeof recommendation === "string" && recommendation.trim()) {
+            setText("personalizedAdvice", recommendation);
+        } else if (recommendation && typeof recommendation === "object") {
+            const advice = recommendation.message ||
+                recommendation.reason ||
+                recommendation.advice;
+
+            if (advice) setText("personalizedAdvice", advice);
+        }
+
+        if (Array.isArray(analysis.topic_analysis)) {
+            renderBackendTopicAnalysis(analysis.topic_analysis);
+        } else if (
+            analysis.topic_analysis &&
+            typeof analysis.topic_analysis === "object"
+        ) {
+            renderBackendTopicAnalysis(
+                Object.entries(analysis.topic_analysis).map(([topic, value]) => ({
+                    topic,
+                    ...(typeof value === "object" ? value : { accuracy: value })
+                }))
+            );
+        }
+
+    } catch (error) {
+        console.warn("Personalized analysis endpoint unavailable:", error);
+        // The dashboard still displays its local analysis of saved records.
+    }
+}
+
+function renderBackendTopicAnalysis(items) {
+    if (!items.length) return;
+
+    const normalized = items.map(item => ({
+        topic: item.topic || item.name || item.category || "Training topic",
+        accuracy: asNumber(item.accuracy ?? item.accuracy_percentage),
+        attempts: asNumber(item.attempts ?? item.total ?? item.count),
+        correct: asNumber(item.correct),
+        averageScore: asNumber(item.average_score ?? item.avg_score)
+    }));
+
+    const container = $("topicAnalysis");
+    container.replaceChildren();
+
+    normalized.forEach(item => {
+        const accuracy = Math.max(0, Math.min(100, item.accuracy));
+
+        const row = document.createElement("div");
+        row.className = "topic-item";
+
+        const heading = document.createElement("div");
+        heading.className = "topic-heading";
+
+        const name = document.createElement("span");
+        name.className = "topic-name";
+        name.textContent = item.topic;
+
+        const percent = document.createElement("span");
+        percent.className = "topic-percent";
+        percent.textContent = Math.round(accuracy) + "% accuracy";
+
+        heading.append(name, percent);
+
+        const track = document.createElement("div");
+        track.className = "bar-track";
+
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = accuracy + "%";
+
+        if (accuracy >= 80) fill.style.background = "#38b879";
+        else if (accuracy < 60) fill.style.background = "#e06b75";
+
+        track.appendChild(fill);
+
+        const meta = document.createElement("div");
+        meta.className = "topic-meta";
+
+        meta.textContent =
+            (item.attempts ? item.attempts + " attempt(s)" : "Saved topic analysis") +
+            (item.averageScore ? " · Average score " + item.averageScore.toFixed(1) + "/10" : "");
+
+        row.append(heading, track, meta);
+        container.appendChild(row);
+    });
+}
+
+function addListItem(list, text) {
+    const item = document.createElement("li");
+    item.textContent = String(text);
+    list.appendChild(item);
+}
+
+function renderHistory(records) {
+    const tbody = $("resultsTable");
+    tbody.replaceChildren();
+
+    if (!records.length) {
+        tbody.innerHTML =
+            '<tr><td colspan="8" class="empty">No training records yet. Complete a simulation to see results here.</td></tr>';
+        return;
+    }
+
+    records.slice(0, 100).forEach(item => {
+        const row = document.createElement("tr");
+        const correct = isCorrect(item);
+
+        const values = [
+            item.trainee || item.username || "Guest",
+            getScenarioLabel(item),
+            getTopic(item),
+            item.decision || "N/A",
+            correct ? "Correct" : "Incorrect",
+            asNumber(item.score).toFixed(1),
+            asNumber(item.response_time) + "s",
+            safeDate(item.created_at || item.timestamp)
+        ];
+
+        values.forEach((value, index) => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+
+            if (index === 4) {
+                cell.className = correct ? "good" : "bad";
+            }
+
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+}
+
+function parseDifficulty(data) {
+    const rec = data?.recommendation;
+
+    const raw = typeof rec === "string"
+        ? rec
+        : [
+            rec?.level,
+            rec?.difficulty,
+            data?.level,
+            data?.difficulty
+        ].filter(Boolean).join(" ");
+
+    const normalized = String(raw || "").toLowerCase();
+
+    let level = "Medium";
+
+    if (normalized.includes("hard") || normalized.includes("advanced")) {
+        level = "Hard";
+    } else if (normalized.includes("easy") || normalized.includes("beginner")) {
+        level = "Easy";
+    }
+
+    const message = typeof rec === "object" && rec
+        ? rec.reason || rec.message || rec.explanation || ""
+        : data.reason || data.message || "";
+
+    return {
+        level,
+        message: message || (
+            level === "Hard"
+                ? "Your recent results suggest that you may be ready for more challenging practice."
+                : level === "Easy"
+                    ? "Build foundational consistency before increasing the difficulty."
+                    : "Continue with balanced scenarios to improve consistency."
+        )
+    };
+}
+
+async function loadRecommendation() {
+    setText("difficultyPill", "Checking recommendation...");
+    $("difficultyPill").className = "pill";
+    setText("recommendationText", "Fetching your latest saved-performance recommendation.");
+    setText("recommendationReason", "");
+
+    try {
+        const data = await fetchJSON(
+            API_BASE + "/recommend-difficulty?trainee=" +
+            encodeURIComponent(trainee)
+        );
+
+        const recommendation = parseDifficulty(data);
+
+        setText("difficultyPill", recommendation.level + " difficulty");
+        $("difficultyPill").className =
+            "pill " + recommendation.level.toLowerCase();
+
+        setText("recommendationText", recommendation.message);
+
+        const settings = {
+            Easy: "Suggested practice: 4 scenarios, 40 seconds each.",
+            Medium: "Suggested practice: 5 scenarios, 30 seconds each.",
+            Hard: "Suggested practice: 5 scenarios, 25 seconds each."
+        };
+
+        setText("recommendationReason", settings[recommendation.level]);
+
+    } catch (error) {
+        console.warn("Recommendation unavailable:", error);
+
+        setText("difficultyPill", "Unavailable");
+        $("difficultyPill").className = "pill";
+
+        setText(
+            "recommendationText",
+            "Could not retrieve the recommendation. The simulator can still be used with its default settings."
+        );
+    }
+}
+
 loadDashboard();
 </script>
 </body>
