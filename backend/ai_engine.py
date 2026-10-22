@@ -48,34 +48,37 @@ def _get_score(correct, response_time=0):
 
 
 def _is_correct(expected, decision):
-    """Compare normalized decision labels."""
     return str(expected).strip().lower() == str(decision).strip().lower()
 
 
 def evaluate_decision(scenario, decision, response_time=0):
-    """Evaluate one simulated training decision."""
-    scenario_id = str(scenario)
+    """Evaluate a simulated training decision."""
+    scenario_id = str(scenario).strip()
     rule = SCENARIO_RULES.get(scenario_id)
 
     if not rule:
-        return {
-            "valid": False,
-            "error": "Unknown scenario ID.",
-        }
+        return {"valid": False, "error": "Unknown scenario ID."}
 
     correct = _is_correct(rule["expected"], decision)
     score = _get_score(correct, response_time)
 
     if correct:
-        feedback = "Correct decision. Review the scenario explanation to reinforce your response."
-        improvement_tip = "Maintain consistent decision-making and review the scenario context."
+        feedback = (
+            "Correct decision. Review the scenario explanation "
+            "to reinforce your response."
+        )
+        improvement_tip = (
+            "Maintain consistent decision-making and review "
+            "the scenario context."
+        )
     else:
         feedback = (
             "Incorrect decision for this training scenario. "
-            "Review the scenario context and the expected response."
+            "Review the scenario context and expected response."
         )
         improvement_tip = (
-            "Practice this topic again and review the feedback before your next attempt."
+            "Practise this topic again and review the feedback "
+            "before your next attempt."
         )
 
     return {
@@ -92,7 +95,7 @@ def evaluate_decision(scenario, decision, response_time=0):
 
 
 def _record_is_correct(record):
-    """Handle the common result fields returned by the database."""
+    """Read correctness consistently from stored database records."""
     result = str(
         record.get("result", record.get("status", ""))
     ).strip().lower()
@@ -111,44 +114,37 @@ def _record_is_correct(record):
     return value is True
 
 
+def _record_scenario(record):
+    """Normalize scenario IDs such as 'Scenario 3' to '3'."""
+    value = record.get("scenario_id", record.get("scenario", ""))
+    scenario_id = str(value).strip()
+
+    if scenario_id.lower().startswith("scenario "):
+        scenario_id = scenario_id.split()[-1]
+
+    return scenario_id
+
+
 def _record_topic(record):
-    """Get the topic stored with an attempt or infer it from its scenario ID."""
+    """Read a saved topic or infer it from the scenario ID."""
     topic = record.get("topic")
 
     if topic and str(topic).strip():
         return str(topic).strip().lower()
 
-    scenario_id = str(
-        record.get("scenario_id", record.get("scenario", ""))
-    ).strip()
-
-    if scenario_id.lower().startswith("scenario "):
-        scenario_id = scenario_id.split()[-1]
-
-    rule = SCENARIO_RULES.get(scenario_id)
-
-    if rule:
-        return rule["topic"]
-
-    return "other"
+    rule = SCENARIO_RULES.get(_record_scenario(record))
+    return rule["topic"] if rule else "other"
 
 
 def _record_score(record):
-    """Read a stored score safely."""
-    value = record.get("score", 0)
-
     try:
-        return max(0.0, min(10.0, float(value)))
+        return max(0.0, min(10.0, float(record.get("score", 0))))
     except (TypeError, ValueError):
         return 0.0
 
 
 def _record_response_time(record):
-    """Read response time safely."""
-    value = record.get(
-        "response_time",
-        record.get("responseTime", 0),
-    )
+    value = record.get("response_time", record.get("responseTime", 0))
 
     try:
         return max(0.0, float(value))
@@ -157,13 +153,7 @@ def _record_response_time(record):
 
 
 def analyze_performance(results):
-    """
-    Summarize stored attempts consistently.
-
-    Accuracy is the percentage of correct decisions, not the average score.
-    A topic's accuracy uses the same correct/attempt count as the overall
-    accuracy calculation.
-    """
+    """Calculate overall and topic-specific training statistics."""
     records = list(results or [])
     total = len(records)
 
@@ -183,63 +173,46 @@ def analyze_performance(results):
             ),
         }
 
-    correct_count = sum(
-        1 for record in records if _record_is_correct(record)
-    )
-
+    correct_count = sum(_record_is_correct(r) for r in records)
     incorrect_count = total - correct_count
 
-    average_score = sum(
-        _record_score(record) for record in records
-    ) / total
+    average_score = sum(_record_score(r) for r in records) / total
+    average_time = sum(_record_response_time(r) for r in records) / total
+    accuracy = round(correct_count / total * 100)
 
-    average_response_time = sum(
-        _record_response_time(record) for record in records
-    ) / total
-
-    accuracy = round((correct_count / total) * 100)
-
-    topic_groups = {}
+    groups = {}
 
     for record in records:
         topic = _record_topic(record)
 
-        if topic not in topic_groups:
-            topic_groups[topic] = {
+        if topic not in groups:
+            groups[topic] = {
                 "attempts": 0,
                 "correct": 0,
-                "total_score": 0.0,
-                "total_response_time": 0.0,
+                "score_total": 0.0,
+                "time_total": 0.0,
             }
 
-        group = topic_groups[topic]
+        group = groups[topic]
         group["attempts"] += 1
         group["correct"] += int(_record_is_correct(record))
-        group["total_score"] += _record_score(record)
-        group["total_response_time"] += _record_response_time(record)
+        group["score_total"] += _record_score(record)
+        group["time_total"] += _record_response_time(record)
 
     topic_analysis = {}
 
-    for topic, group in topic_groups.items():
+    for topic, group in groups.items():
         attempts = group["attempts"]
-        topic_accuracy = round(
-            (group["correct"] / attempts) * 100
-        )
 
         topic_analysis[topic] = {
             "attempts": attempts,
             "correct": group["correct"],
             "incorrect": attempts - group["correct"],
-            "accuracy": topic_accuracy,
-            "average_score": round(
-                group["total_score"] / attempts, 1
-            ),
-            "average_response_time": round(
-                group["total_response_time"] / attempts, 1
-            ),
+            "accuracy": round(group["correct"] / attempts * 100),
+            "average_score": round(group["score_total"] / attempts, 1),
+            "average_response_time": round(group["time_total"] / attempts, 1),
         }
 
-    # Use the same topic_accuracy field for both strengths and weak areas.
     weak_areas = sorted(
         [
             {
@@ -250,7 +223,7 @@ def analyze_performance(results):
             for topic, data in topic_analysis.items()
             if data["accuracy"] < 80
         ],
-        key=lambda item: item["accuracy"],
+        key=lambda item: (item["accuracy"], -item["attempts"]),
     )
 
     strengths = sorted(
@@ -270,13 +243,8 @@ def analyze_performance(results):
     if weak_areas:
         weakest = weak_areas[0]
         recommendation = (
-            "Prioritize "
-            + weakest["topic"]
-            + " practice. Current accuracy is "
-            + str(weakest["accuracy"])
-            + "% across "
-            + str(weakest["attempts"])
-            + " attempt(s)."
+            f"Prioritize {weakest['topic']} practice. Current accuracy is "
+            f"{weakest['accuracy']}% across {weakest['attempts']} attempt(s)."
         )
     elif accuracy >= 80:
         recommendation = (
@@ -285,7 +253,7 @@ def analyze_performance(results):
         )
     else:
         recommendation = (
-            "Review recent decisions and practice foundational scenarios."
+            "Review recent decisions and practise foundational scenarios."
         )
 
     return {
@@ -294,7 +262,7 @@ def analyze_performance(results):
         "incorrect_decisions": incorrect_count,
         "accuracy": accuracy,
         "average_score": round(average_score, 1),
-        "average_response_time": round(average_response_time, 1),
+        "average_response_time": round(average_time, 1),
         "weak_areas": weak_areas,
         "strengths": strengths,
         "topic_analysis": topic_analysis,
@@ -303,7 +271,7 @@ def analyze_performance(results):
 
 
 def recommend_difficulty(history):
-    """Recommend a practice level based on recent saved results."""
+    """Recommend difficulty from the trainee's five most recent attempts."""
     records = list(history or [])
 
     if not records:
@@ -318,47 +286,130 @@ def recommend_difficulty(history):
         }
 
     recent = records[:5]
-
-    correct_count = sum(
-        1 for record in recent if _record_is_correct(record)
+    count = len(recent)
+    accuracy = round(
+        sum(_record_is_correct(r) for r in recent) / count * 100
     )
+    average_score = sum(_record_score(r) for r in recent) / count
+    average_time = sum(_record_response_time(r) for r in recent) / count
 
-    accuracy = round((correct_count / len(recent)) * 100)
-
-    average_score = sum(
-        _record_score(record) for record in recent
-    ) / len(recent)
-
-    average_response_time = sum(
-        _record_response_time(record) for record in recent
-    ) / len(recent)
-
-    if len(recent) >= 3 and average_score >= 8 and accuracy >= 80:
-        level = "Hard"
-        number = 3
+    if count >= 3 and average_score >= 8 and accuracy >= 80:
+        level, number = "Hard", 3
         reason = (
             "Recent results show strong scores and accuracy. "
             "Try the most challenging available practice level."
         )
     elif average_score >= 6 and accuracy >= 60:
-        level = "Medium"
-        number = 2
-        reason = (
-            "Your recent results support a balanced practice level."
-        )
+        level, number = "Medium", 2
+        reason = "Your recent results support a balanced practice level."
     else:
-        level = "Easy"
-        number = 1
-        reason = (
-            "Review foundational scenarios and build consistency."
-        )
+        level, number = "Easy", 1
+        reason = "Review foundational scenarios and build consistency."
 
     return {
         "level": level,
         "difficulty": number,
         "reason": reason,
-        "recent_attempts": len(recent),
+        "recent_attempts": count,
         "average_score": round(average_score, 1),
         "accuracy": accuracy,
-        "average_response_time": round(average_response_time, 1),
+        "average_response_time": round(average_time, 1),
+    }
+
+
+def choose_next_scenario(history):
+    """
+    Adapt scenario selection to the trainee's saved results.
+
+    Weak topics are prioritized first. Within a topic, choose the
+    least-practised available scenario and avoid immediate repetition
+    where another suitable scenario exists.
+    """
+    records = list(history or [])
+    available = list(SCENARIO_RULES.keys())
+
+    scenario_counts = {scenario_id: 0 for scenario_id in available}
+    topic_counts = {}
+    latest_scenario = _record_scenario(records[0]) if records else None
+
+    for record in records:
+        scenario_id = _record_scenario(record)
+
+        if scenario_id in scenario_counts:
+            scenario_counts[scenario_id] += 1
+
+        topic = _record_topic(record)
+        topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+    if not records:
+        return {
+            "scenario": "1",
+            "topic": SCENARIO_RULES["1"]["topic"],
+            "reason": (
+                "No previous attempts were found. Start with a "
+                "foundational situational-awareness scenario."
+            ),
+            "based_on_attempts": 0,
+        }
+
+    analysis = analyze_performance(records)
+    topic_analysis = analysis["topic_analysis"]
+
+    weak_topics = [
+        (topic, details)
+        for topic, details in topic_analysis.items()
+        if details["accuracy"] < 80
+    ]
+
+    if weak_topics:
+        # Lowest accuracy wins; if tied, prefer the topic with more attempts.
+        weak_topics.sort(
+            key=lambda item: (
+                item[1]["accuracy"],
+                -item[1]["attempts"],
+                item[0],
+            )
+        )
+        target_topic, details = weak_topics[0]
+        reason = (
+            f"Extra practice is recommended for {target_topic}, "
+            f"which currently has {details['accuracy']}% accuracy."
+        )
+    else:
+        # Practise the least-covered topic to keep training balanced.
+        all_topics = sorted({rule["topic"] for rule in SCENARIO_RULES.values()})
+        target_topic = min(
+            all_topics,
+            key=lambda topic: (topic_counts.get(topic, 0), topic),
+        )
+        reason = (
+            f"No topic below 80% accuracy was identified. "
+            f"Continue balanced practice in {target_topic}."
+        )
+
+    candidates = [
+        scenario_id
+        for scenario_id, rule in SCENARIO_RULES.items()
+        if rule["topic"] == target_topic
+    ]
+
+    # Prefer scenarios attempted fewer times.
+    minimum_count = min(scenario_counts[item] for item in candidates)
+    candidates = [
+        item for item in candidates
+        if scenario_counts[item] == minimum_count
+    ]
+
+    # Avoid repeating the last scenario if a suitable alternative exists.
+    if len(candidates) > 1 and latest_scenario in candidates:
+        candidates.remove(latest_scenario)
+
+    selected = sorted(candidates)[0]
+
+    return {
+        "scenario": selected,
+        "topic": SCENARIO_RULES[selected]["topic"],
+        "scenario_difficulty": SCENARIO_RULES[selected]["difficulty"],
+        "reason": reason,
+        "based_on_attempts": len(records),
     }
